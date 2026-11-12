@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="color-scheme" content="light">
+<title>PyPTO Toolkit 内嵌 Skills · UX 设计方案</title>
+<style>
+  :root{
+    --ink:#1b2530; --muted:#5c6b7a; --faint:#8494a3;
+    --bg:#ffffff; --panel:#f6f8fb; --panel2:#eef2f7; --line:#e0e7ee; --line2:#cfdae4;
+    --blue:#2f6bd6; --teal:#0e9e8e; --purple:#7458d6; --amber:#c9821a; --red:#d1495b; --green:#2e9e5f;
+    --blue-s:#eaf1fc; --teal-s:#e2f5f2; --purple-s:#eee9fb; --amber-s:#faf0dd; --red-s:#fae7ea; --green-s:#e6f5ec;
+    --mono:"SF Mono","JetBrains Mono","Roboto Mono",Consolas,"Courier New",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:#0e1116;font-family:var(--sans);color:var(--ink);overflow:hidden}
+  .deck{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+  .stage{flex:0 0 1280px;width:1280px;height:720px;background:var(--bg);position:relative;transform-origin:center center;
+    box-shadow:0 20px 60px rgba(0,0,0,.5);overflow:hidden}
+  .slide{position:absolute;inset:0;padding:52px 64px 60px;opacity:0;visibility:hidden;
+    transition:opacity .28s ease;display:flex;flex-direction:column}
+  .slide.active{opacity:1;visibility:visible}
+
+  /* header */
+  .s-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:22px}
+  .s-kicker{font-size:13px;letter-spacing:.16em;font-weight:700;color:var(--teal);text-transform:uppercase}
+  .s-num{font-size:12px;color:var(--faint);font-family:var(--mono)}
+  .s-title{font-size:34px;font-weight:800;line-height:1.15;letter-spacing:-.01em}
+  .s-title .lite{color:var(--muted);font-weight:600}
+  .s-sub{font-size:16px;color:var(--muted);margin-top:8px;line-height:1.5}
+  .body{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center}
+
+  /* generic bits */
+  .row{display:flex;gap:16px}
+  .col{display:flex;flex-direction:column;gap:12px}
+  .grid{display:grid;gap:14px}
+  .g2{grid-template-columns:repeat(2,1fr)} .g3{grid-template-columns:repeat(3,1fr)}
+  .g4{grid-template-columns:repeat(4,1fr)} .g5{grid-template-columns:repeat(5,1fr)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .card h4{font-size:16px;font-weight:750;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+  .card p{font-size:13.5px;color:var(--muted);line-height:1.5}
+  .lead{border-left-width:4px}
+  .k-blue{border-left:4px solid var(--blue)} .k-teal{border-left:4px solid var(--teal)}
+  .k-purple{border-left:4px solid var(--purple)} .k-amber{border-left:4px solid var(--amber)}
+  .k-red{border-left:4px solid var(--red)} .k-green{border-left:4px solid var(--green)}
+  .tag{display:inline-block;font-size:11px;font-weight:700;font-family:var(--mono);
+    padding:2px 7px;border-radius:5px;color:#fff}
+  .t-blue{background:var(--blue)} .t-teal{background:var(--teal)} .t-purple{background:var(--purple)}
+  .t-amber{background:var(--amber)} .t-red{background:var(--red)} .t-green{background:var(--green)}
+  .t-gray{background:var(--faint)}
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;
+    background:#fff;border:1px solid var(--line2);border-radius:20px;padding:5px 12px;color:var(--ink)}
+  .mono{font-family:var(--mono);font-size:.92em;background:var(--panel2);border-radius:5px;padding:1px 6px;color:#33414f}
+  .pill{font-size:12px;font-weight:700;padding:3px 9px;border-radius:6px}
+  .note{font-size:12px;color:var(--faint);margin-top:14px;line-height:1.5}
+  .arrow{color:var(--faint);font-weight:700;align-self:center}
+  ul.clean{list-style:none} ul.clean li{position:relative;padding-left:18px;font-size:14px;
+    color:var(--muted);line-height:1.65} ul.clean li::before{content:"";position:absolute;left:2px;top:9px;
+    width:6px;height:6px;border-radius:50%;background:var(--teal)}
+
+  /* box-diagram nodes */
+  .node{border-radius:11px;padding:12px 14px;text-align:center;border:1.5px solid;background:#fff;min-width:0}
+  .node .nt{font-size:15px;font-weight:750;line-height:1.2}
+  .node .ns{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.35}
+  .n-blue{border-color:var(--blue);background:var(--blue-s)} .n-teal{border-color:var(--teal);background:var(--teal-s)}
+  .n-purple{border-color:var(--purple);background:var(--purple-s)} .n-amber{border-color:var(--amber);background:var(--amber-s)}
+  .n-red{border-color:var(--red);background:var(--red-s)} .n-plain{border-color:var(--line2);background:var(--panel)}
+  .down{align-self:center;color:var(--faint);font-size:22px;line-height:1}
+
+  /* cover */
+  .cover{height:100%;display:flex;flex-direction:column;justify-content:center;padding:0 12px}
+  .cover .eyebrow{font-size:14px;letter-spacing:.2em;color:var(--teal);font-weight:700;text-transform:uppercase}
+  .cover h1{font-size:52px;font-weight:850;line-height:1.12;letter-spacing:-.015em;margin:18px 0 10px}
+  .cover h1 .accent{color:var(--blue)}
+  .cover .csub{font-size:20px;color:var(--muted);font-weight:500;max-width:840px;line-height:1.5}
+  .cover .meta{display:flex;gap:10px;margin-top:34px;flex-wrap:wrap}
+  .cover .three{display:flex;gap:14px;margin-top:40px}
+  .cover .three .p{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .cover .three .p .k{font-size:13px;font-weight:800;color:var(--blue);letter-spacing:.02em}
+  .cover .three .p .v{font-size:14px;color:var(--muted);margin-top:6px;line-height:1.5}
+
+  /* tables */
+  table.map{width:100%;border-collapse:collapse;font-size:13.5px}
+  table.map th{background:var(--panel2);text-align:left;padding:9px 12px;font-weight:750;color:var(--ink);
+    border:1px solid var(--line);font-size:12.5px}
+  table.map td{padding:9px 12px;border:1px solid var(--line);color:var(--muted);vertical-align:top}
+  table.map td b{color:var(--ink);font-weight:700}
+
+  /* seq / swimlane */
+  .seq{display:grid;grid-template-columns:96px 1fr;gap:10px;align-items:stretch}
+  .seq .lane-h{display:flex;align-items:center;font-size:13px;font-weight:750;padding:0 8px;border-radius:8px}
+  .seq .lane{position:relative;height:46px;background:var(--panel);border:1px solid var(--line);border-radius:8px}
+  .seq .ev{position:absolute;top:7px;height:30px;display:flex;align-items:center;gap:6px;
+    border-radius:7px;padding:0 10px;font-size:12px;font-weight:650;color:#fff;white-space:nowrap}
+  .num-badge{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;
+    background:rgba(255,255,255,.28);font-size:11px;font-weight:800}
+
+  /* footer nav */
+  .foot-bar{position:absolute;left:0;right:0;bottom:0;height:6px;background:var(--panel2)}
+  .foot-bar .prog{height:100%;background:linear-gradient(90deg,var(--teal),var(--blue));width:0;transition:width .3s}
+  .nav{position:absolute;bottom:16px;right:24px;display:flex;align-items:center;gap:12px;font-size:12px;color:var(--faint)}
+  .nav button{font:inherit;font-size:15px;border:1px solid var(--line2);background:#fff;color:var(--ink);
+    width:30px;height:30px;border-radius:8px;cursor:pointer;line-height:1}
+  .nav button:hover{background:var(--panel2)}
+  .nav .count{font-family:var(--mono)}
+  .brand{position:absolute;bottom:16px;left:24px;font-size:11px;color:var(--faint);letter-spacing:.03em}
+  .hint{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--faint)}
+
+  .reading-toggle{position:fixed;top:12px;right:12px;z-index:30;padding:8px 12px;border:1px solid var(--line2);border-radius:8px;background:#fff;color:var(--ink);font:14px var(--sans);cursor:pointer}
+  body.reading{overflow:auto;background:var(--bg)}
+  body.reading .deck{position:static;display:block;padding:60px 0 72px}
+  body.reading .stage{width:100%;height:auto;transform:none!important;box-shadow:none;overflow:visible}
+  body.reading .slide{position:static;display:none;padding:24px 20px;opacity:1;visibility:visible}
+  body.reading .slide.active{display:flex}
+  body.reading .body{display:block;min-height:auto}
+  body.reading .s-title{font-size:28px}
+  body.reading .cover h1{font-size:34px}
+  body.reading .cover .three, body.reading .row{flex-direction:column}
+  body.reading .g2, body.reading .g3, body.reading .g4, body.reading .g5{grid-template-columns:minmax(0,1fr)}
+  body.reading .col{width:100%;min-width:0}
+  body.reading .s-head{gap:12px;flex-wrap:wrap}
+  body.reading .body > *{max-width:100%}
+  body.reading table.map{display:block;overflow:auto}
+  body.reading .seq{overflow:auto;min-height:60px}
+  body.reading .seq .lane{min-width:480px}
+  body.reading .nav{position:fixed;z-index:25;bottom:0;left:0;right:0;justify-content:center;padding:10px;background:var(--bg);border-top:1px solid var(--line)}
+  body.reading .nav button{width:44px;height:44px}
+  body.reading .foot-bar{display:none}
+  body.reading .node{width:100%!important;min-width:0!important}
+  body.reading .brand, body.reading .hint{display:none}
+  body.reading .row{width:100%}
+  body.reading .chip{white-space:normal}
+  @media(prefers-reduced-motion:reduce){.slide,.prog{transition:none!important}}
+  @media print{
+    body{overflow:visible;background:#fff}
+    .deck{position:static;display:block}
+    .stage{transform:none!important;box-shadow:none;width:1280px;height:720px;page-break-after:always}
+    .slide{opacity:1;visibility:visible;position:absolute}
+    .nav,.hint{display:none}
+    @page{size:1280px 720px;margin:0}
+  }
+</style>
+</head>
+<body>
+<button class="reading-toggle" id="readingToggle" aria-pressed="false">阅读模式</button>
+<div class="deck"><div class="stage" id="stage">
+
+  <section class="slide active" data-sec="概览">
+    <div class="cover">
+      <div class="eyebrow">PyPTO Toolkit · UX Design Report</div>
+      <h1>在 IDE 里<span class="accent">内嵌辅助开发 / 调试 / 调优</span><br>的 Skills 体系</h1>
+      <div class="csub">让用户的 agent 直接“看见”工具里的图与数据 —— 就地触发、闭环回投。<br>锚定场景：model-workspace 自定义算子开发。</div>
+      <div class="three">
+        <div class="p"><div class="k">零复述</div><div class="v">GUI 能给的，绝不让用户再打字描述给 agent</div></div>
+        <div class="p"><div class="k">一座网关</div><div class="v">本地 MCP 网关：跨 agent 公约数 + 双进程之桥</div></div>
+        <div class="p"><div class="k">证据双向</div><div class="v">GUI→Agent 递选区，Agent→GUI 回投并锁为证据</div></div>
+      </div>
+      <div class="meta">
+        <span class="chip">体验设计方案 v0.2</span>
+        <span class="chip">IDE Skills 体验设计</span>
+        <span class="chip">2026-07-06</span>
+      </div>
+    </div>
+    <div class="brand">PyPTO UX · IDE-embedded Skills</div>
+    <div class="hint">← / → 翻页 · 点击前进</div>
+  </section>
+
+  <section class="slide" data-sec="概览">
+    <div class="s-head"><span class="s-kicker">一句话概览</span><span class="s-num">02</span></div>
+    <h2 class="s-title">把 toolkit 的“图与数据”接进用户已有的 agent，<span class="lite">而不是再造一个聊天框</span></h2>
+    <div class="body">
+      <div class="grid g3" style="margin-top:10px">
+        <div class="card k-blue"><h4><span class="tag t-blue">问题</span></h4>
+          <p>用户同时用 pypto <b>GUI</b> 和 terminal 里的 <b>Claude/Codex</b>；两者是<b>两个进程</b>，agent 看不见你在泳道图上框了什么，只能靠文字复述。</p></div>
+        <div class="card k-teal"><h4><span class="tag t-teal">方案</span></h4>
+          <p>插件拉起一个<b>本地 MCP 网关</b>，持有实时 GUI 状态；任何 agent 连同一个网关，就地触发 <b>18 个候选 pypto skill</b>，结论回投三视图。</p></div>
+        <div class="card k-purple"><h4><span class="tag t-purple">价值</span></h4>
+          <p>诊断—建议—验证形成闭环：设计/开发/调试/调优四类活动都在“数据所在处”完成，经验可沉淀、可复现。</p></div>
+      </div>
+      <div class="row" style="margin-top:20px;gap:10px;justify-content:center;flex-wrap:wrap">
+        <span class="chip">🎯 设计</span><span class="arrow">·</span>
+        <span class="chip">⌨ 开发</span><span class="arrow">·</span>
+        <span class="chip">🩺 调试</span><span class="arrow">·</span>
+        <span class="chip">⚡ 调优</span><span class="arrow">·</span>
+        <span class="chip">📌 沉淀</span>
+      </div>
+      <div class="note">本方案对三种主力 agent 情况都成立：Claude Code / Codex / 未装 agent（插件自带 runtime 兜底）。</div>
+    </div>
+  </section>
+
+  <section class="slide" data-sec="场景与痛点">
+    <div class="s-head"><span class="s-kicker">目标场景</span><span class="s-num">03</span></div>
+    <h2 class="s-title">一位算子性能工程师，<span class="lite">左手 GUI，右手 terminal agent</span></h2>
+    <div class="s-sub">在 model-workspace 工程里写自定义算子（MLA 注意力 / MoE dispatch / fp8 量化 kernel / RMSNorm），日常在四类活动间循环。</div>
+    <div class="body">
+      <div class="row" style="gap:18px;align-items:stretch">
+        <div class="node n-teal" style="flex:1;text-align:left">
+          <div class="nt">🖥 PyPTO Toolkit GUI</div>
+          <div class="ns">计算图 · 泳道图 · 内存追踪 · 精度 OpCheck · 三栏联动</div>
+        </div>
+        <div class="node n-blue" style="flex:1;text-align:left">
+          <div class="nt">⌨ IDE 内置 terminal · Agent</div>
+          <div class="ns">Claude / Codex：分析、改代码、跑命令</div>
+        </div>
+      </div>
+      <div class="row" style="margin-top:16px;gap:12px">
+        <div class="node n-plain" style="flex:1"><div class="nt">设计</div><div class="ns">界定算子边界</div></div>
+        <span class="arrow">→</span>
+        <div class="node n-plain" style="flex:1"><div class="nt">开发</div><div class="ns">写代码骨架</div></div>
+        <span class="arrow">→</span>
+        <div class="node n-plain" style="flex:1"><div class="nt">调试</div><div class="ns">编译 / 精度问题</div></div>
+        <span class="arrow">→</span>
+        <div class="node n-plain" style="flex:1"><div class="nt">调优</div><div class="ns">性能瓶颈</div></div>
+      </div>
+      <div class="note">编译链路：Tensor Graph → Tile Graph → Block Graph → Execution Graph → CodeGen → PTO 虚拟指令 → 设备侧 MPMD 调度。</div>
+    </div>
+  </section>
+
+  <section class="slide" data-sec="场景与痛点">
+    <div class="s-head"><span class="s-kicker">核心矛盾</span><span class="s-num">04</span></div>
+    <h2 class="s-title">“双进程鸿沟”：<span class="lite">agent 天生看不见 GUI 里的东西</span></h2>
+    <div class="body">
+      <div class="row" style="align-items:center;gap:0;margin:6px 0 18px">
+        <div class="node n-teal" style="flex:1;text-align:left">
+          <div class="nt">GUI 进程</div><div class="ns">看得见图、泳道、buffer、精度表</div></div>
+        <div style="flex:0 0 120px;text-align:center;color:var(--red);font-weight:800;font-size:13px">
+          <div style="font-size:26px;letter-spacing:2px">⟋ ⟍</div>看不见彼此<br>的运行状态</div>
+        <div class="node n-blue" style="flex:1;text-align:left">
+          <div class="nt">terminal agent 进程</div><div class="ns">只能读文字，靠用户复述</div></div>
+      </div>
+      <div class="grid g5" style="gap:10px">
+        <div class="card k-red" style="padding:12px 14px"><h4 style="font-size:14px"><span class="tag t-red">PP1</span></h4><p style="font-size:12.5px">上下文复述税：图/表得用文字重描一遍</p></div>
+        <div class="card k-red" style="padding:12px 14px"><h4 style="font-size:14px"><span class="tag t-red">PP2</span></h4><p style="font-size:12.5px">工具割裂：结论无法在两侧互相带过去</p></div>
+        <div class="card k-red" style="padding:12px 14px"><h4 style="font-size:14px"><span class="tag t-red">PP3</span></h4><p style="font-size:12.5px">能力不可见：不知道有哪些 skill、何时能用</p></div>
+        <div class="card k-red" style="padding:12px 14px"><h4 style="font-size:14px"><span class="tag t-red">PP4</span></h4><p style="font-size:12.5px">不敢信：改了什么、会不会外发源码</p></div>
+        <div class="card k-red" style="padding:12px 14px"><h4 style="font-size:14px"><span class="tag t-red">PP5</span></h4><p style="font-size:12.5px">经验难复现：调优过程散落在 chat 里</p></div>
+      </div>
+      <div class="note">弥合这道鸿沟，是整套架构存在的根本理由。</div>
+    </div>
+  </section>
+
+  <section class="slide" data-sec="场景与痛点">
+    <div class="s-head"><span class="s-kicker">体验设计原则</span><span class="s-num">05</span></div>
+    <h2 class="s-title">八条设计点，<span class="lite">P1 零复述 · P3 证据双向 是脊梁</span></h2>
+    <div class="body">
+      <div class="grid g4" style="gap:12px">
+        <div class="card k-green" style="border-left-color:var(--blue);background:var(--blue-s)"><h4><span class="tag t-blue">P1</span>零复述</h4><p>触发点自带隐式上下文</p></div>
+        <div class="card k-green"><h4><span class="tag t-green">P2</span>就地触发</h4><p>skill 长在代码/图/泳道处</p></div>
+        <div class="card" style="border-left:4px solid var(--blue);background:var(--blue-s)"><h4><span class="tag t-blue">P3</span>证据双向</h4><p>递选区 + 回投高亮锁定</p></div>
+        <div class="card k-green"><h4><span class="tag t-green">P4</span>可发现优先</h4><p>Palette+点亮+就地+引导</p></div>
+        <div class="card k-green"><h4><span class="tag t-green">P5</span>渐进披露</h4><p>先摘要后细节 · 详略切换</p></div>
+        <div class="card k-green"><h4><span class="tag t-green">P6</span>信任可解释</h4><p>注入了什么/依据哪次 run</p></div>
+        <div class="card k-green"><h4><span class="tag t-green">P7</span>复现优先</h4><p>lock pin + playbook 沉淀</p></div>
+        <div class="card k-green"><h4><span class="tag t-green">P8</span>降级不失能</h4><p>无 agent / 气隙仍可用</p></div>
+      </div>
+      <div class="note">蓝色两条直接回应“双进程鸿沟”，是本方案区别于通用 IDE agent 的核心。</div>
+    </div>
+  </section>
+
+  <section class="slide" data-sec="场景与痛点">
+    <div class="s-head"><span class="s-kicker">UX 主线索引</span><span class="s-num">06</span></div>
+    <h2 class="s-title">痛点 → 场景 → 交互 → 设计点，<span class="lite">一条可追溯的线</span></h2>
+    <div class="body">
+      <table class="map">
+        <tr><th style="width:20%">痛点</th><th style="width:26%">典型场景</th><th style="width:32%">对应交互形态</th><th style="width:22%">设计点</th></tr>
+        <tr><td><b>PP1</b> 上下文复述税</td><td>MLA idle 段调优</td><td>① GUI→Agent 递选区</td><td><span class="pill" style="background:var(--blue-s);color:var(--blue)">P1 零复述</span></td></tr>
+        <tr><td><b>PP2</b> 工具割裂</td><td>agent 说 <span class="mono">funcHash</span> 要回 GUI 找</td><td>② Agent→GUI 回投高亮</td><td><span class="pill" style="background:var(--blue-s);color:var(--blue)">P3 证据双向</span></td></tr>
+        <tr><td><b>PP3</b> 能力不可见</td><td>打开泳道图不知能干嘛</td><td>Skill Palette + 情境点亮</td><td><span class="pill" style="background:var(--green-s);color:var(--green)">P4 可发现</span></td></tr>
+        <tr><td><b>PP3/4</b> 认知过载</td><td>大 <span class="mono">swimlane</span> JSON</td><td>focus 摘要 + expand 取详</td><td><span class="pill" style="background:var(--green-s);color:var(--green)">P5 渐进披露</span></td></tr>
+        <tr><td><b>PP4</b> 不敢信</td><td>怕 模型工程源码外发</td><td>Context 面板 + 数据边界</td><td><span class="pill" style="background:var(--green-s);color:var(--green)">P6 可解释</span></td></tr>
+        <tr><td><b>PP5</b> 难复现</td><td>队友拿不到一致结果</td><td><span class="mono">skills.lock</span> + playbook-extract</td><td><span class="pill" style="background:var(--green-s);color:var(--green)">P7 复现</span></td></tr>
+      </table>
+      <div class="note">读法：痛点驱动设计点，设计点落到交互形态，交互形态在具体场景里被验证。</div>
+    </div>
+  </section>
+
+  <section class="slide" data-sec="概念答疑">
+    <div class="s-head"><span class="s-kicker">概念答疑 ①</span><span class="s-num">07</span></div>
+    <h2 class="s-title">“skill 存哪儿” 其实是<span class="lite">两个正交的问题</span></h2>
+    <div class="body">
+      <div class="row" style="gap:16px">
+        <div class="card k-amber" style="flex:1">
+          <h4><span class="tag t-amber">轴 A</span>字节存在哪</h4>
+          <p style="margin-bottom:10px">分发与信任问题</p>
+          <div class="col" style="gap:7px">
+            <span class="chip">☁ 云端 registry</span>
+            <span class="chip">💾 插件安装目录（本机）</span>
+            <span class="chip">📁 用户工程内 <span class="mono">.pypto/</span></span>
+          </div>
+        </div>
+        <div class="card k-purple" style="flex:1">
+          <h4><span class="tag t-purple">轴 B</span>agent 用什么接口消费</h4>
+          <p style="margin-bottom:10px">互操作问题</p>
+          <div class="col" style="gap:7px">
+            <span class="chip">📄 原生 SKILL.md 文件</span>
+            <span class="chip">🔧 MCP 工具</span>
+            <span class="chip">💬 MCP prompt</span>
+            <span class="chip">🧩 插件自带 runtime</span>
+          </div>
+        </div>
+      </div>
+      <div class="node n-teal" style="margin-top:16px;text-align:center">
+        <div class="nt">MCP 把 A 与 B 解耦</div>
+        <div class="ns">字节在云上或插件里都行；只要用一个本地 MCP server 暴露能力，Claude 与 Codex 看到的都是“一个 MCP server”，不关心字节在哪</div>
+      </div>
+      <div class="note">反之：只用“往工程塞 SKILL.md”，存放位置就被死绑定，且宿主是否消费取决于其 Skills 发现机制，不能按宿主名称排他判断。</div>
+    </div>
+  </section>
+
+  <section class="slide" data-sec="概念答疑">
+    <div class="s-head"><span class="s-kicker">概念答疑 ②</span><span class="s-num">08</span></div>
+    <h2 class="s-title">存放模型：<span class="lite">包管理器的 lockfile 心智，而非二选一</span></h2>
+    <div class="body">
+      <div class="grid g3" style="gap:14px">
+        <div class="card k-teal">
+          <h4>① 工程内 <span class="mono">model-workspace/</span></h4>
+          <ul class="clean" style="margin-top:4px">
+            <li><span class="mono">.pypto/skills.lock</span> · 钉版本[进git]</li>
+            <li><span class="mono">.pypto/config.json</span> · 网关/边界</li>
+            <li><span class="mono">.pypto/skills/</span> · 团队覆盖(可选)</li>
+            <li><span class="mono">.mcp.json</span> / <span class="mono">AGENTS.md</span> · 发现薄壳</li>
+            <li><span class="mono">.pypto/cache/</span>·<span class="mono">output/</span> [gitignore]</li>
+          </ul>
+        </div>
+        <div class="card k-amber">
+          <h4>② 本机磁盘（工程外）</h4>
+          <ul class="clean" style="margin-top:4px">
+            <li><span class="mono">~/.vscode/…/pypto-toolkit/skills/</span></li>
+            <li>受管 skill 核心 · 随插件 · 离线</li>
+            <li>网关进程 · 长驻 · 持有实时状态</li>
+          </ul>
+        </div>
+        <div class="card" style="border-left:4px solid var(--faint)">
+          <h4>③ 组织内网（远端 · 可选）</h4>
+          <ul class="clean" style="margin-top:4px">
+            <li>registry 镜像 · 集中更新</li>
+            <li>气隙企业镜像于内网</li>
+            <li>基础功能不依赖它</li>
+          </ul>
+        </div>
+      </div>
+      <div class="row" style="margin-top:14px;gap:10px;align-items:center">
+        <span class="pill" style="background:var(--panel2);color:var(--muted)">类比</span>
+        <span class="chip"><span class="mono">node_modules</span>/<span class="mono">~/.cargo</span> = 本机 bundle</span>
+        <span class="chip"><span class="mono">Cargo.lock</span> = 工程 pin</span>
+        <span class="chip">私有 npm registry = 内网镜像</span>
+        <span class="arrow">→</span>
+        <b style="font-size:13.5px">仲裁：工程覆盖 &gt; bundle &gt; 镜像</b>
+      </div>
+      <div class="note">同时拿到：可复现（lock 进 git）· 可离线 · 可定制 · 不漂移 · IP 可控。符合 <span class="mono">share-safe</span>。</div>
+    </div>
+  </section>
+
+  <section class="slide" data-sec="概念答疑">
+    <div class="s-head"><span class="s-kicker">概念答疑 ③ · 核心</span><span class="s-num">09</span></div>
+    <h2 class="s-title">能力网关 = <span class="lite">两个进程之间的“共享内存 + 翻译官”</span></h2>
+    <div class="body">
+      <div class="row" style="gap:16px;align-items:stretch">
+        <div class="card k-red" style="flex:1">
+          <h4><span class="tag t-red">✗ 错误做法</span></h4>
+          <p>每个 agent 各自 <span class="mono">stdio</span> 拉起一个 server 子进程 —— 子进程互相独立，<b>都看不到 GUI 状态</b>。</p>
+        </div>
+        <div class="card k-green" style="flex:1.4">
+          <h4><span class="tag t-green">✓ 正确做法</span></h4>
+          <p>扩展进程跑<b>唯一一个长驻 server</b>，绑定本机 endpoint，持有权威实时状态；各 agent 连的是<b>转发到它的薄适配器</b>。</p>
+        </div>
+      </div>
+      <div class="col" style="margin-top:16px;align-items:center;gap:6px">
+        <div class="row" style="gap:12px;justify-content:center">
+          <span class="chip">Claude Code</span><span class="chip">Codex</span><span class="chip">VS Code Copilot</span><span class="chip">自带 runtime</span>
+        </div>
+        <div class="down">↓ 薄适配器（stdio↔socket / HTTP·SSE） ↓</div>
+        <div class="node n-teal" style="min-width:520px;text-align:center">
+          <div class="nt">PyPTO 能力网关 · 本地 MCP Server（扩展进程内长驻）</div>
+          <div class="ns">持有同一份实时 GUI 状态 · 能力由 pypto 实现，而非 VS Code</div>
+        </div>
+      </div>
+      <div class="note">这正是“terminal 里的 agent 能看见你在泳道图上框的那一段”的物理实现。</div>
+      <div class="note" style="color:var(--faint)">※ 各 agent 具体配置文件位置与 VS Code MCP 发现 API 属设计意图，工程实现前按当时官方文档复核。</div>
+    </div>
+  </section>
+
+  <section class="slide" data-sec="概念设计">
+    <div class="s-head"><span class="s-kicker">整体架构</span><span class="s-num">10</span></div>
+    <h2 class="s-title">四层解耦：<span class="lite">消费方 · 网关 · 运行时 · 存放层</span></h2>
+    <div class="body">
+      <div class="col" style="align-items:center;gap:4px">
+        <div class="row" style="gap:12px;justify-content:center">
+          <div class="node n-blue" style="width:220px"><div class="nt">Claude Code</div><div class="ns">读 SKILL.md + 连 MCP</div></div>
+          <div class="node n-blue" style="width:220px"><div class="nt">Codex</div><div class="ns">读 AGENTS.md + 连 MCP</div></div>
+          <div class="node n-blue" style="width:220px"><div class="nt">插件内置 UI</div><div class="ns">右键 / 泳道图触发</div></div>
+        </div>
+        <div class="down">↓</div>
+        <div class="node n-teal" style="width:680px"><div class="nt">PyPTO 能力网关 · 本地 MCP Server</div><div class="ns">对异构 agent 的统一桥 · 注入实时上下文</div></div>
+        <div class="down">↓</div>
+        <div class="row" style="gap:12px;justify-content:center">
+          <div class="node n-purple" style="width:334px"><div class="nt">Skill 编排运行时</div><div class="ns">解析 · 链式 · 版本仲裁</div></div>
+          <div class="node n-purple" style="width:334px"><div class="nt">上下文提供器</div><div class="ns">编辑器 / Profiler 实时状态</div></div>
+        </div>
+        <div class="down">↓</div>
+        <div class="row" style="gap:12px;justify-content:center">
+          <div class="node n-amber" style="width:220px"><div class="nt">云端 Registry</div><div class="ns">中心版本 · 气隙仅作更新源</div></div>
+          <div class="node n-amber" style="width:220px"><div class="nt">插件本地 bundle</div><div class="ns">离线核心 · 签名</div></div>
+          <div class="node n-amber" style="width:220px"><div class="nt">工程内 <span class="mono">.pypto/</span></div><div class="ns">pin + 覆盖 · 进 git</div></div>
+        </div>
+      </div>
+      <div class="note">换 agent 只改变“从哪个前门进”，不改变 skill 行为。</div>
+    </div>
+  </section>
+
+  <section class="slide" data-sec="概念设计">
+    <div class="s-head"><span class="s-kicker">差异化主线 · 旗舰</span><span class="s-num">11</span></div>
+    <h2 class="s-title">实时上下文注入回路：<span class="lite">GUI ↔ 网关 ↔ Agent</span></h2>
+    <div class="body">
+      <div class="row" style="align-items:center;gap:8px;margin:10px 0 6px">
+        <div class="node n-teal" style="flex:1"><div class="nt">Toolkit GUI</div><div class="ns">视图选区 = 证据</div></div>
+        <div class="col" style="flex:1.2;gap:4px">
+          <div class="chip" style="justify-content:center;border-color:var(--teal)">① 选区 → 联动 key　→</div>
+          <div class="chip" style="justify-content:center;border-color:var(--blue)">←　② focus 摘要 + handle</div>
+        </div>
+        <div class="node n-purple" style="flex:1.1"><div class="nt">能力网关</div><div class="ns">组装 Context Frame</div></div>
+        <div class="col" style="flex:1.2;gap:4px">
+          <div class="chip" style="justify-content:center;border-color:var(--blue)">③ expand 渐进取详　→</div>
+          <div class="chip" style="justify-content:center;border-color:var(--purple)">←　④ highlight 回投</div>
+        </div>
+        <div class="node n-blue" style="flex:1"><div class="nt">终端 Agent</div><div class="ns">Claude / Codex</div></div>
+      </div>
+      <div class="grid g2" style="margin-top:14px;gap:14px">
+        <div class="card k-teal"><h4>① 递选区</h4><p>框选泳道图 idle 段 → 网关顺 <span class="mono">leafHash→funcHash→源码行</span> 串好上下文，无需用户复述</p></div>
+        <div class="card k-purple"><h4>②③ 渐进披露</h4><p><span class="mono">focus()</span> 只回摘要 + handle；agent 需要细节再 <span class="mono">expand()</span>，不把大 JSON 塞进 prompt</p></div>
+      </div>
+      <div class="note">④ <span class="mono">highlight</span> 复用 toolkit 已有的锁定模式 = 把 agent 结论钉成跨视图证据。这是通用 IDE agent 做不出的，因为它们没有 PyPTO 的语义联动。</div>
+    </div>
+  </section>
+
+  <section class="slide" data-sec="概念设计">
+    <div class="s-head"><span class="s-kicker">白盒时序</span><span class="s-num">12</span></div>
+    <h2 class="s-title">一次调优，<span class="lite">四方八拍各自在干什么</span></h2>
+    <div class="body">
+      <div class="col" style="gap:8px">
+        <div class="seq"><div class="lane-h" style="background:var(--panel2)">用户</div><div class="lane">
+          <div class="ev" style="background:var(--faint);left:1%"><span class="num-badge">1</span>看到 idle</div>
+          <div class="ev" style="background:var(--faint);left:22%">框选</div>
+          <div class="ev" style="background:var(--faint);left:36%">Send</div>
+          <div class="ev" style="background:var(--faint);left:50%">提问</div>
+          <div class="ev" style="background:var(--faint);left:80%"><span class="num-badge">7</span>点 hash</div>
+        </div></div>
+        <div class="seq"><div class="lane-h" style="background:var(--teal-s);color:var(--teal)">GUI 插件</div><div class="lane">
+          <div class="ev" style="background:var(--teal);left:22%"><span class="num-badge">2</span>算时间窗 + leafHash</div>
+          <div class="ev" style="background:var(--teal);left:80%">三栏锁定 <span class="mono" style="color:#fff">mla_decode.py:142</span></div>
+        </div></div>
+        <div class="seq"><div class="lane-h" style="background:var(--purple-s);color:var(--purple)">网关</div><div class="lane">
+          <div class="ev" style="background:var(--purple);left:31%">组装 Frame · <span class="mono" style="color:#fff">ctx#7f3a</span></div>
+          <div class="ev" style="background:var(--purple);left:58%">按需返回明细</div>
+          <div class="ev" style="background:var(--purple);left:82%">译 key 推 GUI</div>
+        </div></div>
+        <div class="seq"><div class="lane-h" style="background:var(--blue-s);color:var(--blue)">终端 Agent</div><div class="lane">
+          <div class="ev" style="background:var(--blue);left:44%"><span class="num-badge">4</span>focus</div>
+          <div class="ev" style="background:var(--blue);left:58%"><span class="num-badge">5</span>expand</div>
+          <div class="ev" style="background:var(--blue);left:70%"><span class="num-badge">6</span>结论: register spill</div>
+        </div></div>
+      </div>
+      <div class="note">⑧ 点候选 tile 的 “Try in scratch” → 影子 worktree 重跑 profile → <span class="mono">pypto-perf-compare</span> 回填新旧对比。全程若源码变，网关比对 <span class="mono">source_hash</span> 标 <span class="mono">staleness</span> 并警告。</div>
+    </div>
+  </section>
+
+  <section class="slide" data-sec="概念设计">
+    <div class="s-head"><span class="s-kicker">数据心脏</span><span class="s-num">13</span></div>
+    <h2 class="s-title">Context Frame：<span class="lite">把联动引擎变成机器可读的上下文</span></h2>
+    <div class="body">
+      <div class="row" style="gap:16px">
+        <div class="card" style="flex:1.3;background:#fff;border:1.5px solid var(--purple)">
+          <h4><span class="tag t-purple">Context Frame</span></h4>
+          <div class="grid g2" style="gap:8px;margin-top:8px">
+            <span class="chip"><span class="mono">focus</span> 当前视图</span>
+            <span class="chip"><span class="mono">run</span> + source_hash</span>
+            <span class="chip"><span class="mono">editor</span> file+line</span>
+            <span class="chip"><span class="mono">graph</span> funcHash</span>
+            <span class="chip"><span class="mono">swimlane</span> 时间窗</span>
+            <span class="chip"><span class="mono">memory</span> buffer</span>
+            <span class="chip"><span class="mono">opcheck</span> 异常行</span>
+            <span class="chip" style="border-color:var(--red)"><span class="mono">staleness</span> ⚠</span>
+          </div>
+        </div>
+        <div class="card k-teal" style="flex:1">
+          <h4>拟议网关工具契约</h4>
+          <ul class="clean" style="margin-top:2px">
+            <li><span class="mono">pypto_focus()</span> → 摘要+handle</li>
+            <li><span class="mono">pypto_expand(h,path)</span> → 取详</li>
+            <li><span class="mono">pypto_highlight(keys)</span> → 回投</li>
+            <li><span class="mono">pypto_run(...)</span> → 编译+profile</li>
+          </ul>
+        </div>
+      </div>
+      <div class="row" style="margin-top:16px;gap:8px;justify-content:center;align-items:center">
+        <span class="pill" style="background:var(--panel2);color:var(--muted)">相关性 key 链</span>
+        <span class="chip"><span class="mono">semantic_label</span></span><span class="arrow">→</span>
+        <span class="chip"><span class="mono">funcHash / opmagic</span></span><span class="arrow">→</span>
+        <span class="chip"><span class="mono">rootHash / leafHash</span></span>
+      </div>
+      <div class="note" style="color:var(--faint)">※ 模型工程相关算子名、hash、时间窗均为 UX 场景示意，不对应真实运行记录。</div>
+    </div>
+  </section>
+
+  <section class="slide" data-sec="概念设计">
+    <div class="s-head"><span class="s-kicker">Skill 体系</span><span class="s-num">14</span></div>
+    <h2 class="s-title">18 个候选 <span class="mono" style="font-size:.8em">pypto-&lt;动作&gt;</span> skill，<span class="lite">五个桶</span></h2>
+    <div class="body">
+      <div class="grid g5" style="gap:12px;align-items:start">
+        <div class="card k-blue" style="padding:14px"><h4 style="font-size:15px">🎯 设计</h4>
+          <div class="col" style="gap:6px;margin-top:6px">
+            <span class="chip" style="font-size:11.5px">op-scope</span><span class="chip" style="font-size:11.5px">api-explore</span><span class="chip" style="font-size:11.5px">op-design</span></div></div>
+        <div class="card k-teal" style="padding:14px"><h4 style="font-size:15px">⌨ 开发</h4>
+          <div class="col" style="gap:6px;margin-top:6px">
+            <span class="chip" style="font-size:11.5px">op-scaffold</span><span class="chip" style="font-size:11.5px">api-explain</span><span class="chip" style="font-size:11.5px">graph-explain</span></div></div>
+        <div class="card k-purple" style="padding:14px"><h4 style="font-size:15px">🩺 调试</h4>
+          <div class="col" style="gap:6px;margin-top:6px">
+            <span class="chip" style="font-size:11.5px">compile-triage</span><span class="chip" style="font-size:11.5px">pass-explain</span><span class="chip" style="font-size:11.5px">precision-debug</span><span class="chip" style="font-size:11.5px">memory-inspect</span></div></div>
+        <div class="card k-amber" style="padding:14px"><h4 style="font-size:15px">⚡ 调优</h4>
+          <div class="col" style="gap:6px;margin-top:6px">
+            <span class="chip" style="font-size:11.5px">perf-triage</span><span class="chip" style="font-size:11.5px">tile-advisor</span><span class="chip" style="font-size:11.5px">fusion-advisor</span><span class="chip" style="font-size:11.5px">overlap-optimizer</span><span class="chip" style="font-size:11.5px">perf-compare</span></div></div>
+        <div class="card k-green" style="padding:14px"><h4 style="font-size:15px">📌 沉淀</h4>
+          <div class="col" style="gap:6px;margin-top:6px">
+            <span class="chip" style="font-size:11.5px">run</span><span class="chip" style="font-size:11.5px">playbook-extract</span><span class="chip" style="font-size:11.5px">reviewer-handoff</span></div></div>
+      </div>
+      <div class="note">默认全部是“受管 skill”（工程外）；工程里只有 <span class="mono">skills.lock</span> 的 pin 与可选覆盖。命名参考 cannbot <span class="mono">ops/pypto-*</span>，保持本方案自有一致命名。</div>
+    </div>
+  </section>
+
+  <section class="slide" data-sec="体验设计">
+    <div class="s-head"><span class="s-kicker">交互形态</span><span class="s-num">15</span></div>
+    <h2 class="s-title">六类入口并存，<span class="lite">单一入口 = 退回 ChatGPT</span></h2>
+    <div class="body">
+      <div class="grid g3" style="gap:12px">
+        <div class="card k-blue"><h4>源码 in-editor</h4><p>CodeLens · Hover · Quick Fix · Inline · 右键 “PyPTO Skills”</p></div>
+        <div class="card k-teal"><h4>数据视图内 <span class="tag t-teal" style="font-size:10px">最大差异化</span></h4><p>泳道框选 · Pass 节点 · Block 节点 · buffer · opCheck 条目</p></div>
+        <div class="card k-purple"><h4>侧边栏面板</h4><p>Skill Palette + 情境点亮</p></div>
+        <div class="card k-amber"><h4>工程 / 流水 hook</h4><p>编译后小结 · profile 越线 · CI 回归</p></div>
+        <div class="card" style="border-left:4px solid var(--faint)"><h4>终端 / CLI</h4><p><span class="mono">pypto skill</span> · 终端输出选区→Send · <span class="mono">@mention</span></p></div>
+        <div class="card" style="border-left:4px solid var(--faint)"><h4>Agent 主动</h4><p>idle 建议 · 阈值通知（默认关）</p></div>
+      </div>
+      <div class="row" style="margin-top:14px;gap:10px;justify-content:center;align-items:center">
+        <div class="node n-teal" style="padding:8px 14px"><div class="nt" style="font-size:13px">GUI 选区</div></div>
+        <span class="chip" style="border-color:var(--teal)">① Send →</span>
+        <div class="node n-blue" style="padding:8px 14px"><div class="nt" style="font-size:13px">Agent</div></div>
+        <span class="chip" style="border-color:var(--purple)">② ← highlight</span>
+        <div class="node n-purple" style="padding:8px 14px"><div class="nt" style="font-size:13px">三视图回投</div></div>
+      </div>
+      <div class="note">同一 skill 必须多表面可触发；输出落地有 inline diff / scratch / plan card / run+compare / 跨视图高亮五种形态。</div>
+    </div>
+  </section>
+
+  <section class="slide" data-sec="体验设计">
+    <div class="s-head"><span class="s-kicker">端到端故事 · 旗舰 D3</span><span class="s-num">16</span></div>
+    <h2 class="s-title">MLA 融合注意力调优，<span class="lite">五步闭环</span></h2>
+    <div class="body">
+      <div class="row" style="gap:8px;align-items:stretch">
+        <div class="card k-teal" style="flex:1;padding:14px"><h4 style="font-size:14px">1 发现</h4><p style="font-size:12.5px">泳道图 AIC 核 <span class="mono">2.24–2.56ms</span> 大片 idle</p></div>
+        <span class="arrow">→</span>
+        <div class="card k-teal" style="flex:1;padding:14px"><h4 style="font-size:14px">2 递选区</h4><p style="font-size:12.5px">框选 → “Send to agent”，terminal 补一句“为什么空转”</p></div>
+        <span class="arrow">→</span>
+        <div class="card k-blue" style="flex:1;padding:14px"><h4 style="font-size:14px">3 诊断</h4><p style="font-size:12.5px"><span class="mono">perf-triage</span>：tile 太大→register spill→等 LSU</p></div>
+        <span class="arrow">→</span>
+        <div class="card k-purple" style="flex:1;padding:14px"><h4 style="font-size:14px">4 回投</h4><p style="font-size:12.5px">点 <span class="mono">funcHash</span> → 三栏锁定到源码行</p></div>
+        <span class="arrow">→</span>
+        <div class="card k-amber" style="flex:1;padding:14px"><h4 style="font-size:14px">5 验证</h4><p style="font-size:12.5px"><span class="mono">tile-advisor</span> 候选 → scratch 重跑 → <span class="mono">perf-compare</span></p></div>
+      </div>
+      <div class="grid g3" style="margin-top:18px;gap:12px">
+        <div class="card"><h4 style="font-size:14px">🩺 故事 2</h4><p style="font-size:12.5px">MoE dispatch 编译挂 Pass → <span class="mono">compile-triage</span> + <span class="mono">pass-explain</span></p></div>
+        <div class="card"><h4 style="font-size:14px">🎯 故事 3</h4><p style="font-size:12.5px">fp8 量化精度异常 → <span class="mono">precision-debug</span> + <span class="mono">memory-inspect</span></p></div>
+        <div class="card"><h4 style="font-size:14px">🧩 故事 4</h4><p style="font-size:12.5px">从零起算子 → scope→explore→design→scaffold 链</p></div>
+      </div>
+      <div class="note" style="color:var(--faint)">※ 算子名、时间窗、收益判断为 UX 场景示意。</div>
+    </div>
+  </section>
+
+  <section class="slide" data-sec="体验设计">
+    <div class="s-head"><span class="s-kicker">信息架构</span><span class="s-num">17</span></div>
+    <h2 class="s-title">一个插件，<span class="lite">一个侧边栏面板，四段递进</span></h2>
+    <div class="body">
+      <div class="row" style="gap:16px;align-items:stretch">
+        <div class="col" style="flex:1.1;gap:10px">
+          <div class="node n-purple" style="text-align:left"><div class="nt">▸ Context（当前焦点）</div><div class="ns">agent 此刻“看到”的 Frame · Send / Pin / 清空 · staleness</div></div>
+          <div class="node n-teal" style="text-align:left"><div class="nt">▸ Skills（Palette）</div><div class="ns">分桶卡片 · 情境点亮 · 显示 读什么/出什么/版本</div></div>
+          <div class="node n-amber" style="text-align:left"><div class="nt">▸ Runs（历史运行结果）</div><div class="ns">run 树 · 右键触发相关 skill · 回归/异常徽标</div></div>
+          <div class="node n-plain" style="text-align:left"><div class="nt">▸ Sessions &amp; Playbooks</div><div class="ns">skill 运行史 · 可重跑 · extract 成 playbook</div></div>
+        </div>
+        <div class="card" style="flex:1;background:var(--panel)">
+          <h4>三条交叉引用是灵魂</h4>
+          <ul class="clean" style="margin-top:6px">
+            <li><b>Runs → Skills</b>：run 是多数 skill 的数据入口</li>
+            <li><b>Skills → Runs</b>：缺 run 时一键跳去 <span class="mono">pypto-run</span></li>
+            <li><b>Context 贯穿</b>：消除多视图焦点歧义</li>
+          </ul>
+          <div class="note" style="margin-top:12px">可发现性四层：Palette 主发现面 · 情境点亮 · 就地入口 · 首启引导。内嵌 skill 头号死因是“塞进去=藏起来”。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" data-sec="落地">
+    <div class="s-head"><span class="s-kicker">原型 / Demo 拆分</span><span class="s-num">18</span></div>
+    <h2 class="s-title">12 个可独立验证的 Demo，<span class="lite">D3/D4/D5 为 P0 骨架</span></h2>
+    <div class="body">
+      <div class="row" style="gap:14px;align-items:stretch">
+        <div class="card" style="flex:1;border-top:4px solid var(--red)">
+          <h4><span class="pill" style="background:var(--red-s);color:var(--red)">P0 骨架</span></h4>
+          <ul class="clean" style="margin-top:6px">
+            <li><b>D3</b> 框选→Send→perf-triage→三栏回投 ★旗舰</li>
+            <li><b>D4</b> Skill Palette + 情境点亮</li>
+            <li><b>D5</b> Context 面板（Frame / staleness / 字段可见）</li>
+          </ul>
+        </div>
+        <div class="card" style="flex:1;border-top:4px solid var(--amber)">
+          <h4><span class="pill" style="background:var(--amber-s);color:var(--amber)">P1 支撑</span></h4>
+          <ul class="clean" style="margin-top:6px">
+            <li><b>D1</b> 首启引导 · <b>D2</b> 发现配置自动生成</li>
+            <li><b>D6</b> 输出四形态 · <b>D7</b> skill chain/session</li>
+            <li><b>D9</b> 数据边界/同意 · <b>D11</b> perf-compare</li>
+          </ul>
+        </div>
+        <div class="card" style="flex:1;border-top:4px solid var(--faint)">
+          <h4><span class="pill" style="background:var(--panel2);color:var(--muted)">P2 完善</span></h4>
+          <ul class="clean" style="margin-top:6px">
+            <li><b>D8</b> 无 agent 降级（Run in PyPTO）</li>
+            <li><b>D10</b> 版本 pin / 覆盖仲裁可视化</li>
+            <li><b>D12</b> playbook-extract 沉淀回流</li>
+          </ul>
+        </div>
+      </div>
+      <div class="note">D3+D4+D5 可合成一个“主 demo 页”即可讲清核心差异化，其余以独立小 demo 串接。</div>
+    </div>
+  </section>
+
+  <section class="slide" data-sec="落地">
+    <div class="s-head"><span class="s-kicker">治理与边界</span><span class="s-num">19</span></div>
+    <h2 class="s-title">既要好用，<span class="lite">更要可信、可控、可落地</span></h2>
+    <div class="body">
+      <div class="row" style="gap:16px;align-items:stretch">
+        <div class="card k-red" style="flex:1">
+          <h4><span class="tag t-red">反模式 · 不能踩</span></h4>
+          <ul class="clean" style="margin-top:4px">
+            <li>把所有问题塞回聊天框</li>
+            <li>自动改主源码不留痕（默认写影子 worktree）</li>
+            <li>skill 名字 / 触发条件不可见</li>
+            <li>过度 proactive 破坏心流（默认关）</li>
+            <li>让用户文字复述视图能直接给的事</li>
+          </ul>
+        </div>
+        <div class="card k-green" style="flex:1">
+          <h4><span class="tag t-green">治理约束</span></h4>
+          <ul class="clean" style="margin-top:4px">
+            <li>版本漂移：受管集中更新 + 工程只 pin</li>
+            <li>数据边界：模型工程源码/权重不悄悄外发</li>
+            <li>气隙内网：必须有 fully-local 模式</li>
+            <li>权限模型：跑编译/profile/写 scratch 需授权</li>
+            <li>长任务：profile 有进度 / 可取消 / 可后台</li>
+          </ul>
+        </div>
+      </div>
+      <div class="note">数据准备：保留格式契约，校验构造数据的身份、单位与关联。业务事实需 <span class="mono">来源复核</span>。</div>
+    </div>
+  </section>
+
+  <section class="slide" data-sec="落地">
+    <div class="s-head"><span class="s-kicker">收束 · 下一步</span><span class="s-num">20</span></div>
+    <h2 class="s-title">一句话：<span class="lite">让 agent 长在数据所在处，闭环回投证据</span></h2>
+    <div class="body">
+      <div class="grid g3" style="gap:14px">
+        <div class="card lead k-blue"><h4>零复述</h4><p>触发点自带隐式上下文，网关串好 key 链</p></div>
+        <div class="card lead k-teal"><h4>一座网关</h4><p>跨 agent 公约数 + GUI/terminal 双进程桥</p></div>
+        <div class="card lead k-purple"><h4>证据双向</h4><p>递选区 → 诊断 → 回投锁定，形成闭环</p></div>
+      </div>
+      <div class="card" style="margin-top:18px;background:var(--panel);border:1px solid var(--line)">
+        <h4>下一步</h4>
+        <div class="row" style="gap:10px;margin-top:8px;flex-wrap:wrap">
+          <span class="chip">① 先做 D3 旗舰原型</span>
+          <span class="chip">② 准备 profile 场景与公开边界</span>
+          <span class="chip">③ MCP 发现配置按实现时官方文档复核</span>
+          <span class="chip">④ 需要时建 <span class="mono">关联研究材料</span></span>
+        </div>
+      </div>
+      <div class="note">来源：本仓 <span class="mono">pypto-toolkit</span> / <span class="mono">pypto-architecture</span> / <span class="mono">cannbot-skills</span> 知识源；详见 <span class="mono">ux-analysis.md</span>（体验设计方案 v0.2）。</div>
+    </div>
+  </section>
+
+  <div class="foot-bar"><div class="prog" id="prog"></div></div>
+  <div class="nav">
+    <button id="prev" aria-label="上一页">‹</button>
+    <span class="count"><span id="cur">1</span> / <span id="tot">20</span></span>
+    <button id="next" aria-label="下一页">›</button>
+  </div>
+</div></div>
+
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var stage = document.getElementById('stage');
+  var prog = document.getElementById('prog');
+  var curEl = document.getElementById('cur');
+  var i = 0;
+  var reading = window.innerWidth < 700;
+  var modeChosen = false;
+  var toggle = document.getElementById('readingToggle');
+  function updateMode(){
+    document.body.classList.toggle('reading', reading);
+    toggle.setAttribute('aria-pressed', String(reading));
+    toggle.textContent = reading ? '16:9 演示' : '阅读模式';
+    scale();
+  }
+  toggle.addEventListener('click', function(){ modeChosen=true; reading=!reading; updateMode(); });
+  document.getElementById('tot').textContent = slides.length;
+
+  function show(n){
+    i = Math.max(0, Math.min(slides.length-1, n));
+    slides.forEach(function(s,k){ s.classList.toggle('active', k===i); s.setAttribute('aria-hidden', String(k!==i)); });
+    prog.style.width = ((i+1)/slides.length*100)+'%';
+    curEl.textContent = i+1;
+    if(reading) window.scrollTo(0,0);
+    if(location.hash !== '#'+(i+1)) history.replaceState(null,'','#'+(i+1));
+  }
+  function next(){ show(i+1); }
+  function prev(){ show(i-1); }
+
+  function scale(){
+    var s = Math.min(window.innerWidth/1280, window.innerHeight/720);
+    stage.style.transform = 'scale('+s+')';
+  }
+  window.addEventListener('resize', function(){ if(!modeChosen) reading=window.innerWidth<700; updateMode(); });
+  window.addEventListener('hashchange', function(){var n=Number(location.hash.slice(1));if(n>=1&&n<=slides.length)show(n-1);});
+
+  document.addEventListener('keydown', function(e){
+    if(e.target.closest('input,select,textarea') || (e.key===' ' && e.target.closest('button,a'))) return;
+    if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'||e.key==='j'){ next(); e.preventDefault(); }
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'||e.key==='k'){ prev(); e.preventDefault(); }
+    else if(e.key==='Home'){ show(0); }
+    else if(e.key==='End'){ show(slides.length-1); }
+  });
+  document.getElementById('next').addEventListener('click', function(e){ e.stopPropagation(); next(); });
+  document.getElementById('prev').addEventListener('click', function(e){ e.stopPropagation(); prev(); });
+  stage.addEventListener('click', function(e){
+    if(reading || e.target.closest('a,button')) return;
+    var r = stage.getBoundingClientRect();
+    if((e.clientX - r.left) < r.width*0.28) prev(); else next();
+  });
+
+  var h = parseInt((location.hash||'').replace('#',''),10);
+  updateMode();
+  show(isNaN(h)?0:h-1);
+})();
+</script>
+<script src="../../_shared/entry-shell.js?v=825d3e9441695dc2" data-entry="ide-embedded-skills" data-mode="compact" defer></script>
+</body>
+</html>

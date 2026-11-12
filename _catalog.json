@@ -1,0 +1,323 @@
+{
+  "schemaVersion": 1,
+  "vocabulary": {
+    "intents": [
+      {
+        "id": "research",
+        "label": "业务研究",
+        "subs": [
+          {
+            "id": "domain",
+            "label": "领域学习"
+          },
+          {
+            "id": "industry",
+            "label": "行业与竞品"
+          }
+        ]
+      },
+      {
+        "id": "design",
+        "label": "设计方案",
+        "subs": [
+          {
+            "id": "report",
+            "label": "设计报告"
+          },
+          {
+            "id": "demo",
+            "label": "Demo"
+          }
+        ]
+      },
+      {
+        "id": "misc",
+        "label": "其他",
+        "subs": []
+      }
+    ],
+    "topics": [
+      {
+        "id": "ascend-hardware",
+        "label": "昇腾硬件架构"
+      },
+      {
+        "id": "pto-programming",
+        "label": "PTO 编程"
+      },
+      {
+        "id": "operator-development",
+        "label": "算子开发"
+      },
+      {
+        "id": "model-development",
+        "label": "模型开发"
+      },
+      {
+        "id": "swimlane",
+        "label": "泳道图性能分析"
+      },
+      {
+        "id": "pto-toolkit",
+        "label": "PTO Toolkit"
+      }
+    ],
+    "gens": [
+      {
+        "id": "a2-a3",
+        "label": "A2/A3",
+        "aliases": [
+          "A2/A3"
+        ]
+      },
+      {
+        "id": "a5",
+        "label": "A5",
+        "aliases": [
+          "A5"
+        ]
+      }
+    ]
+  },
+  "tracks": [
+    {
+      "id": "pto-basics",
+      "title": "PTO 基础学习路径"
+    }
+  ],
+  "entries": [
+    {
+      "id": "swimlane-profiler",
+      "title": "Swimlane Profiler",
+      "summary": "从执行泳道检查任务、同步等待与 PMU，组织建议预览和预计复跑对照。",
+      "intent": "design",
+      "sub": "demo",
+      "topics": [
+        "swimlane"
+      ],
+      "gens": [
+        "a5"
+      ],
+      "readMin": null,
+      "wip": true,
+      "featured": false,
+      "track": null,
+      "related": [],
+      "cover": "cover.jpg"
+    },
+    {
+      "id": "ascend-hardware-architecture",
+      "title": "Ascend A5 架构映射",
+      "summary": "关联硬件对象、数据路径与迁移检查，区分架构事实和设计推导。",
+      "intent": "design",
+      "sub": "demo",
+      "topics": [
+        "ascend-hardware",
+        "operator-development"
+      ],
+      "gens": [
+        "a2-a3",
+        "a5"
+      ],
+      "readMin": null,
+      "wip": true,
+      "featured": false,
+      "track": null,
+      "related": [],
+      "cover": "cover.jpg"
+    },
+    {
+      "id": "a5-pmu-visualization",
+      "title": "A5 PMU 数据可视化：把计数器转成可检查的诊断线索",
+      "summary": "按采集组与问题组织 PMU 诊断，保留计量口径和缺失状态。",
+      "intent": "design",
+      "sub": "report",
+      "topics": [
+        "swimlane"
+      ],
+      "gens": [
+        "a5"
+      ],
+      "readMin": 20,
+      "wip": true,
+      "featured": false,
+      "track": null,
+      "related": [
+        "swimlane-profiler"
+      ],
+      "cover": "cover.jpg"
+    },
+    {
+      "id": "fusion-performance-diagnosis",
+      "title": "融合算子性能诊断：从异常任务走向可验证的修改",
+      "summary": "以运行证据连接异常任务、候选修改与可比验证的产品方案。",
+      "intent": "design",
+      "sub": "report",
+      "topics": [
+        "swimlane",
+        "operator-development"
+      ],
+      "gens": [],
+      "readMin": 36,
+      "wip": true,
+      "featured": false,
+      "track": null,
+      "related": [
+        "fusion-performance-experience",
+        "a5-pmu-visualization",
+        "swimlane-profiler",
+        "performance-diagnosis-benchmark"
+      ],
+      "cover": "cover.jpg"
+    },
+    {
+      "id": "fusion-performance-experience",
+      "title": "性能调优体验设计：让每一步判断都有依据",
+      "summary": "用对象连续、证据检查和可验证行动组织性能调优体验。",
+      "intent": "design",
+      "sub": "report",
+      "topics": [
+        "swimlane",
+        "operator-development"
+      ],
+      "gens": [],
+      "readMin": 21,
+      "wip": true,
+      "featured": false,
+      "track": null,
+      "related": [],
+      "cover": "cover.jpg"
+    },
+    {
+      "id": "agent-in-the-loop",
+      "title": "Agent in the loop：把建议组织成可检查的实验",
+      "summary": "围绕任务、证据与受控实验设计人与 Agent 的协作机制。",
+      "intent": "design",
+      "sub": "report",
+      "topics": [
+        "operator-development",
+        "pto-toolkit"
+      ],
+      "gens": [],
+      "readMin": 31,
+      "wip": true,
+      "featured": false,
+      "track": null,
+      "related": [
+        "ide-embedded-skills",
+        "agentic-operator-development",
+        "ascend-agent-skills"
+      ],
+      "cover": "cover.jpg"
+    },
+    {
+      "id": "ide-embedded-skills",
+      "title": "IDE 内嵌 Skills：让选区成为可追问的上下文",
+      "summary": "把视图选区交给 Agent，并将解释定位回同一对象的集成方案。",
+      "intent": "design",
+      "sub": "report",
+      "topics": [
+        "operator-development",
+        "pto-toolkit"
+      ],
+      "gens": [],
+      "readMin": 14,
+      "wip": true,
+      "featured": false,
+      "track": null,
+      "related": [],
+      "cover": "cover.jpg"
+    },
+    {
+      "id": "runtime-execution-graph",
+      "title": "执行逻辑图设计：读清依赖，再理解运行",
+      "summary": "定义依赖图的身份、结构边、约简模式、详情与降级规则。",
+      "intent": "design",
+      "sub": "report",
+      "topics": [
+        "operator-development",
+        "pto-toolkit"
+      ],
+      "gens": [],
+      "readMin": 7,
+      "wip": true,
+      "featured": false,
+      "track": null,
+      "related": [
+        "runtime-execution-graph-explorer"
+      ],
+      "cover": "cover.jpg"
+    },
+    {
+      "id": "runtime-execution-graph-explorer",
+      "title": "执行逻辑图探索",
+      "summary": "探索任务依赖、邻接关系与派生时间信息，保留结构与时序的区别。",
+      "intent": "design",
+      "sub": "demo",
+      "topics": [
+        "operator-development",
+        "pto-toolkit"
+      ],
+      "gens": [],
+      "readMin": null,
+      "wip": true,
+      "featured": false,
+      "track": null,
+      "related": [],
+      "cover": "cover.jpg"
+    },
+    {
+      "id": "performance-diagnosis-benchmark",
+      "title": "性能诊断竞品分析：把时间、资源和判断连接起来",
+      "summary": "比较五类性能工具的信息组织，提炼可迁移的诊断体验。",
+      "intent": "research",
+      "sub": "industry",
+      "topics": [
+        "swimlane",
+        "operator-development"
+      ],
+      "gens": [],
+      "readMin": 30,
+      "wip": true,
+      "featured": false,
+      "track": null,
+      "related": [],
+      "cover": "cover.jpg"
+    },
+    {
+      "id": "agentic-operator-development",
+      "title": "Agent 时代的算子开发体验：围绕可验收任务设计",
+      "summary": "以可验收任务研究委托、检查、接管与按需可视化。",
+      "intent": "research",
+      "sub": "industry",
+      "topics": [
+        "operator-development",
+        "pto-toolkit"
+      ],
+      "gens": [],
+      "readMin": 21,
+      "wip": true,
+      "featured": false,
+      "track": null,
+      "related": [],
+      "cover": "cover.jpg"
+    },
+    {
+      "id": "ascend-agent-skills",
+      "title": "Ascend Agent Skills：聚合分发与源仓的版本关系",
+      "summary": "按固定历史快照解释聚合分发、子模块版本与统计冲突。",
+      "intent": "research",
+      "sub": "domain",
+      "topics": [
+        "pto-toolkit"
+      ],
+      "gens": [],
+      "readMin": 8,
+      "wip": true,
+      "featured": false,
+      "track": null,
+      "related": [],
+      "cover": "cover.jpg"
+    }
+  ]
+}

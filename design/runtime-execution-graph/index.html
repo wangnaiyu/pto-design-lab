@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>Runtime Execution Graph PRD</title><style>body{margin:0;background:#f8f7f3;color:#252b32;font:16px/1.8 system-ui}main{max-width:1040px;margin:auto;padding:48px 24px}h1,h2{line-height:1.3;margin-top:2em}table{border-collapse:collapse;width:100%;display:block;overflow:auto}td,th{border:1px solid #ddd;padding:10px;text-align:left}pre{padding:16px;background:#eaeef1;overflow:auto}code{overflow-wrap:anywhere}a{color:#265c90}</style>
+<!-- PDL-READING-LAYER-START -->
+<link id="pdl-reading-layer" rel="stylesheet" href="../../_shared/report-reading.css?v=825d3e9441695dc2">
+<style id="pdl-reading-dark">
+/* 深色覆盖：由 drafts/preview/dark_overrides.py 从本报告自带 CSS 的字面颜色推导，
+   按明度分档映射到深色色阶。只换颜色，不改尺寸、布局与正文。 */
+:root[data-theme="dark"] body { background: #232327; color: #ececea; }
+:root[data-theme="dark"] td, :root[data-theme="dark"] th { border: 1px solid #2d2d31; }
+:root[data-theme="dark"] pre { background: #232327; }
+:root[data-theme="dark"] a { color: #ececea; }
+</style>
+<script id="pdl-reading-layer-js" src="../../_shared/report-reading.js?v=825d3e9441695dc2"></script>
+<!-- PDL-READING-LAYER-END -->
+</head><body><main><h1>Runtime Execution Graph PRD</h1>
+<p>版本：V1.0
+状态：产品方案
+需求日期：2026-07-20
+结构化日期：2026-07-23</p>
+<h2>1. 背景与目标</h2>
+<p>PyPTO 开启 dependency generation 后会在 JIT 输出中生成 <code>dfx_outputs/deps.json</code>。当前用户需额外运行 <code>simpler_setup.tools.deps_viewer</code> 并打开 HTML；目标是在 pypto-toolkit IDE 插件内直接完成解析、构图、传递约简和交互展示。</p>
+<p>成功结果：</p>
+<ul>
+<li>无需 Python、Graphviz 或预生成 HTML。</li>
+<li>Full / Reduced / Omitted、节点标记与 simpler viewer 语义一致。</li>
+<li>本地处理，不依赖外部网络。</li>
+<li>缺少 name map 或性能 sidecar 时仍可降级展示结构图。</li>
+</ul>
+<p>非目标：</p>
+<ul>
+<li>不采集或修改 runtime 数据。</li>
+<li>不把 dependency graph 当作时间线。</li>
+<li><code>🔥</code> 不表示性能热点，<code>⭐</code> 不表示真实关键路径。</li>
+</ul>
+<h2>2. 用户入口</h2>
+<p>P0 支持：</p>
+<ol>
+<li>文件树右键 <code>deps.json</code> → Open Dependency Graph。</li>
+<li>打开 <code>deps.json</code> 时在编辑器标题栏显示入口。</li>
+<li>JIT 输出列表对包含 <code>dfx_outputs/deps.json</code> 的运行显示入口。</li>
+<li>命令面板提供 <code>PyPTO: Open Dependency Graph</code>。</li>
+</ol>
+<p>展示载体为 IDE Webview 或原生图面板。</p>
+<h2>3. 输入与数据契约</h2>
+<p>必选输入为 <code>deps.json</code>，核心集合为 <code>tasks[]</code>、<code>tensors[]</code>、<code>edges[]</code>。可选输入为 <code>name_map_*.json</code> 和 <code>l2_swimlane_records.json</code>。</p>
+<p>name map 优先级：</p>
+<ol>
+<li>用户显式选择；</li>
+<li>同目录修改时间最新；</li>
+<li>回退到 <code>func_id</code>。</li>
+</ol>
+<p><code>task_id</code>、<code>pred</code>、<code>succ</code>、<code>tensor_id</code>、<code>buffer_addr</code> 必须保留为原始字符串或无符号 64 位值，不得直接转为 JavaScript <code>Number</code>。Task ID 拆分仅使用 <code>BigInt</code>。Task ID 必须按输入声明的 runtime 及格式版本解析，缺失或未知 runtime 时不得猜测布局。</p>
+<p>固定实现 <code>runtime@31f9e72e</code> 中，TMR（<code>tensormap_and_ringbuffer</code>）使用 <code>(ring_id &lt;&lt; 32) | local_id</code>：ring 左移 32 位，但有效位宽为 8，local 为 32 位。HBG（<code>host_build_graph</code>）使用 space / parent / local 布局，没有同一 ring 语义。<code>raw_halves</code> 在 bit 32 拆分原始高低半部，不代表 32 位 ring。</p>
+<p>以下仅示意已校验的 TMR 值；超出 8 位 ring 范围或属于无效哨兵的值应拒绝，不得靠掩码静默截断：</p>
+<pre><code class="language-text">ring_id  = (task_id &gt;&gt; 32) &amp; 0xff
+local_id = task_id &amp; 0xffffffff
+</code></pre>
+<h2>4. 图构建规则</h2>
+<ul>
+<li>节点集合是 <code>tasks[].task_id</code>、所有 <code>edges[].pred/succ</code> 和可选性能数据 task ID 的并集。</li>
+<li><code>edges=[]</code> 时仍显示 <code>tasks[]</code> 中的孤立节点。</li>
+<li>结构边按唯一 <code>(pred, succ)</code> 去重，用于绘图、fanin/fanout 和传递约简。</li>
+<li>原始 edge 作为注释边保留 tensor、arg、source、overlap 等详情。</li>
+<li>同一任务对有多条注释边时，默认只画一条结构箭头。</li>
+<li>对声明为 TMR 的输入，全部节点都在 ring 0 时显示 <code>local_id</code>；只要存在非零 ring，统一显示 <code>(ring_id, local_id)</code>。HBG 输入使用其声明的 space / parent / local 标签。</li>
+</ul>
+<h2>5. 节点与标签</h2>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>判定</th>
+<th>编码</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>AIC</td>
+<td>仅 AIC kernel 有效</td>
+<td>蓝色圆角矩形</td>
+</tr>
+<tr>
+<td>AIV</td>
+<td>仅 AIV kernel 有效</td>
+<td>橙色椭圆</td>
+</tr>
+<tr>
+<td>MIX</td>
+<td>AIC 与 AIV 同时有效</td>
+<td>绿色菱形</td>
+</tr>
+<tr>
+<td>alloc</td>
+<td>分配任务</td>
+<td>灰色虚线 note</td>
+</tr>
+<tr>
+<td>dummy</td>
+<td>有 task、无有效 kernel</td>
+<td>灰色普通节点</td>
+</tr>
+<tr>
+<td>unknown</td>
+<td>无法识别</td>
+<td>浅灰圆角矩形</td>
+</tr>
+</tbody></table>
+<p><code>kernel_ids</code> 按 <code>[aic, aiv0, aiv1]</code> 解析，<code>-1</code> 表示无效。存在 L2 sidecar 时合并同一 <code>task_id</code> 的记录，否则回退到 <code>kernel_ids</code>。</p>
+<p>标签格式：</p>
+<pre><code class="language-text">&lt;marker&gt; &lt;task-id&gt; · &lt;func-name&gt; ↓&lt;fanin&gt; ↑&lt;fanout&gt;
+</code></pre>
+<p>函数名回退顺序：name map → L2 记录 → <code>f&lt;func_id&gt;</code> → <code>alloc/dummy/unknown</code>。</p>
+<h2>6. 标记与邻接语义</h2>
+<p><code>🔥</code>：<code>early_dispatch=true</code> 或节点为 <code>alloc</code>，表示 speculative early-dispatch 的直接生产者。</p>
+<p><code>⭐</code>：节点有直接前驱；全部直接前驱都有 <code>🔥</code>；且至少一个直接前驱不是 <code>alloc</code>。它只表示结构候选，不证明运行时实际提前调度。</p>
+<p><code>↓N</code> 和 <code>↑M</code> 分别表示不同的直接前驱和直接后继数量。所有标记与计数均基于完整唯一结构图，不随显示模式改变。</p>
+<h2>7. 边模式与布局</h2>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>可见边</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Full</td>
+<td>全部唯一结构边</td>
+</tr>
+<tr>
+<td>Reduced</td>
+<td>按声明算法约简后的边集；采用 tensor lifetime 保护时不承诺全图最小</td>
+</tr>
+<tr>
+<td>Omitted</td>
+<td>被传递约简移除的冗余边</td>
+</tr>
+</tbody></table>
+<p>三个模式复用完整图的一套节点布局，切换时节点不得跳动；只更新可见边数。若检测到环，禁用 Reduced / Omitted 并明确提示传递约简不可用。</p>
+<h2>8. SPMD、交互与详情</h2>
+<ul>
+<li><code>block_num &gt; 1</code>：红框、红色 <code>xN</code>，Hover 展示 block number。</li>
+<li>空白拖拽平移；滚轮以指针为中心缩放。</li>
+<li>点击节点打开详情；点击空白或 <code>Esc</code> 关闭。</li>
+<li><code>F</code> 适配窗口，<code>R</code> 恢复 1:1。</li>
+<li>详情展示 predecessor / successor，并按 <code>name_hint</code> 分组；先按数量降序，再按名称升序。</li>
+</ul>
+<p>详情数量是不同相邻任务数，不是 tensor、annotated edge 或路径数。</p>
+<h2>9. Tensor 详情模式</h2>
+<p>“Show Tensor Info”开启后显示 INPUT / INOUT / OUTPUT / OUTPUT_EXISTING 端口与参数信息，包括 arg index/type、tensor label、dtype、storage、buffer numel、shape、strides、start offset。</p>
+<ul>
+<li>INOUT 同时出现在输入和输出区。</li>
+<li>tensor 名按 <code>tensors[]</code> 顺序生成 <code>T0</code>、<code>T1</code>……</li>
+<li><code>source=explicit</code> 用虚线。</li>
+<li><code>overlap != covered</code> 时提示真实 overlap 状态。</li>
+<li>无法确定 arg slot 时连节点主体，不猜测端口。</li>
+</ul>
+<h2>10. 状态、错误与性能</h2>
+<p>状态栏显示节点数、当前可见结构边数、模式、文件名及可选 sidecar 加载状态；图例必须解释节点类型、SPMD、fanin/fanout、<code>🔥</code>、<code>⭐</code>。</p>
+<p>JSON 错误、缺字段、无法解析的 pred/succ、sidecar 读取失败、空图和环均需给用户可理解的通知。可降级情况继续展示可用内容并报告跳过数量。</p>
+<p>P0：本方案验收规模下平移、缩放、选中和模式切换无明显卡顿，切换模式不得重算布局。P1：千节点策略、后台布局、进度/取消及按 ID、函数名、标记、core type 搜索。</p>
+<h2>11. P0 验收</h2>
+<ul>
+<li>本方案的构造验收基准：构造验收集 Full 为 516 节点 / 1032 边，Omitted 为 516 节点 / 4 边。</li>
+<li>三种模式节点位置一致；Omitted 中 fanin/fanout 与 Full 一致。</li>
+<li><code>(1, 3) · projection_head</code> 显示 <code>🔥⭐ (1, 3) · projection_head ↓2 ↑16</code>，详情包含 <code>alloc ×1</code>、<code>normalization_stage ×1</code>、<code>selection_stage ×16</code>。</li>
+<li>只有 alloc 前驱的节点不显示 <code>⭐</code>；任一直接前驱无 <code>🔥</code> 时也不显示。</li>
+<li><code>block_num=16</code> 显示红框和 <code>x16</code>。</li>
+<li>超过 JS 安全整数范围的 ID 无精度丢失。</li>
+<li>缺 sidecar 可打开；孤立节点可见。</li>
+<li><code>A→B→C</code> 加 <code>A→C</code> 的测试图在三个模式中分别显示 3 / 2 / 1 条边。</li>
+<li>有环时 reduction 被禁用并显示警告。</li>
+</ul>
+<p>注：构造验收集输入 <code>deps.json</code> 统计为 512 个 task；516 是 viewer 节点并集的验收数，可能包含只出现在边或可选性能数据中的 task，二者不可混写。</p>
+</main>
+<script src="../../_shared/entry-shell.js?v=825d3e9441695dc2" data-entry="runtime-execution-graph" data-mode="bar" defer></script>
+</body></html>
