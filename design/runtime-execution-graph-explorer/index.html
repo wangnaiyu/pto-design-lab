@@ -1,0 +1,1319 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Runtime Execution Graph Demo</title>
+  <link rel="icon" href="data:," />
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f8fb;
+      --panel: #ffffff;
+      --ink: #1b2430;
+      --muted: #627084;
+      --line: #d7dde8;
+      --aic: #3d7dd8;
+      --aiv: #d4832f;
+      --mix: #2f9d75;
+      --hot: #cf3d35;
+      --edge: #94a1b8;
+      --edge-strong: #53627a;
+      --selected: #111827;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      min-width: 0;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr) 360px;
+      grid-template-rows: 58px calc(100vh - 58px);
+      min-height: 100vh;
+    }
+
+    header {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--line);
+      background: #fbfcfe;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 720;
+      letter-spacing: 0;
+    }
+
+    .sub {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    .left, .right {
+      background: var(--panel);
+      overflow: auto;
+    }
+
+    .left {
+      border-right: 1px solid var(--line);
+      padding: 14px;
+    }
+
+    .right {
+      border-left: 1px solid var(--line);
+      padding: 14px;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      overflow: hidden;
+      background:
+        linear-gradient(90deg, rgba(215, 221, 232, .55) 1px, transparent 1px),
+        linear-gradient(rgba(215, 221, 232, .55) 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+      user-select: none;
+    }
+
+    svg:active { cursor: grabbing; }
+
+    .section {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .section:first-child { padding-top: 0; }
+    .section:last-child { border-bottom: 0; }
+
+    .section h2 {
+      margin: 0 0 10px;
+      font-size: 13px;
+      color: #2e3a4d;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin: 10px 0 5px;
+    }
+
+    input, select, button {
+      width: 100%;
+      min-height: 34px;
+      border: 1px solid #cbd3df;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+      font-size: 13px;
+      border-radius: 6px;
+      padding: 7px 9px;
+    }
+
+    button {
+      cursor: pointer;
+      font-weight: 650;
+      background: #eef3fa;
+    }
+
+    button:hover { background: #e2ebf7; }
+
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .stage-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 7px;
+      margin-top: 10px;
+    }
+
+    .stage-row button {
+      min-height: 36px;
+      padding: 7px 6px;
+      font-size: 12px;
+    }
+
+    .stage-row button.active {
+      background: #1f2a3d;
+      border-color: #1f2a3d;
+      color: #fff;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px;
+      background: #fbfcff;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 18px;
+      line-height: 1.1;
+    }
+
+    .metric span {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .legend {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .swatch {
+      width: 11px;
+      height: 11px;
+      border-radius: 3px;
+      display: inline-block;
+      margin-right: 6px;
+      vertical-align: -1px;
+    }
+
+    .graph-node rect {
+      stroke: #aeb7c7;
+      stroke-width: 1.2;
+      rx: 7;
+      filter: drop-shadow(0 2px 3px rgba(23, 32, 46, .12));
+    }
+
+    .graph-node text {
+      font-size: 12px;
+      fill: #182230;
+      pointer-events: none;
+    }
+
+    .graph-node .small {
+      font-size: 10px;
+      fill: #5a6677;
+    }
+
+    .graph-node.selected rect {
+      stroke: var(--selected);
+      stroke-width: 3;
+    }
+
+    .graph-node.dimmed {
+      opacity: .22;
+    }
+
+    .graph-edge {
+      fill: none;
+      stroke: var(--edge);
+      stroke-width: 1.25;
+      opacity: .62;
+    }
+
+    .graph-edge.explicit {
+      stroke-dasharray: 5 5;
+    }
+
+    .graph-edge.selected {
+      stroke: var(--selected);
+      stroke-width: 2.8;
+      opacity: 1;
+    }
+
+    .swimlane-bar {
+      cursor: pointer;
+      stroke: rgba(27, 36, 48, .22);
+      stroke-width: 1;
+      rx: 4;
+    }
+
+    .swimlane-bar.selected {
+      stroke: var(--selected);
+      stroke-width: 2.4;
+    }
+
+    .lane-label {
+      font-size: 11px;
+      fill: #4f5f74;
+      font-weight: 650;
+    }
+
+    .time-axis {
+      stroke: #cfd6e2;
+      stroke-width: 1;
+    }
+
+    .time-label {
+      font-size: 10px;
+      fill: #6b778a;
+    }
+
+    .edge-label {
+      font-size: 10px;
+      fill: #66758b;
+      paint-order: stroke;
+      stroke: #fff;
+      stroke-width: 3px;
+      stroke-linejoin: round;
+    }
+
+    .group-label {
+      font-size: 12px;
+      font-weight: 700;
+      fill: #4b596d;
+    }
+
+    .pill-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .pill {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 11px;
+      color: #4f5f74;
+      background: #fbfcff;
+    }
+
+    .detail-title {
+      font-size: 15px;
+      font-weight: 760;
+      margin-bottom: 5px;
+    }
+
+    .kv {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 6px 10px;
+      font-size: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid #eef1f6;
+    }
+
+    .kv span:nth-child(odd) {
+      color: var(--muted);
+    }
+
+    .list {
+      display: grid;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .item {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px;
+      background: #fbfcff;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .item:hover { border-color: #9db4d6; }
+
+    .item strong {
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .floating {
+      position: absolute;
+      left: 14px;
+      bottom: 14px;
+      background: rgba(255, 255, 255, .92);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px 10px;
+      color: var(--muted);
+      font-size: 12px;
+      box-shadow: 0 8px 28px rgba(20, 29, 43, .12);
+    }
+    .compact-panels { display: none; }
+    .graph-tools { position:absolute;top:12px;right:12px;display:flex;gap:6px;z-index:2; }
+    .graph-tools button { min-width:40px;min-height:40px;white-space:nowrap; }
+    .canvas-wrap { min-width: 0; }
+    @media (max-width: 1180px) {
+      .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(480px, 1fr); height: 100dvh; }
+      header { flex-wrap: wrap; padding: 12px; gap: 8px; }
+      header > .sub { display: none; }
+      .compact-panels { display: flex; gap: 8px; width: 100%; }
+      .compact-panels button { min-height: 40px; flex: 1; }
+      .left, .right, .canvas-wrap { grid-column: 1; grid-row: 2; min-width: 0; }
+      .left, .right { display: none; }
+      .app[data-panel="filters"] .left, .app[data-panel="details"] .right { display: block; }
+      .app[data-panel="filters"] .canvas-wrap, .app[data-panel="details"] .canvas-wrap { visibility: hidden; }
+      .floating { max-width: calc(100% - 28px); }
+      svg { touch-action: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" data-panel="graph">
+    <header>
+      <div>
+        <h1>执行逻辑图 Runtime Execution Graph</h1>
+        <div class="sub" id="subtitle">加载中</div>
+      </div>
+      <div class="sub">滚轮缩放，拖拽平移，点击节点查看详情</div>
+      <nav class="compact-panels" aria-label="执行图面板">
+        <button data-panel="filters" aria-pressed="false">筛选</button>
+        <button data-panel="graph" aria-pressed="true">执行图</button>
+        <button data-panel="details" aria-pressed="false">详情</button>
+      </nav>
+    </header>
+
+    <aside class="left">
+      <div class="section">
+        <h2>数据</h2>
+        <input id="fileInput" type="file" accept="application/json,.json" />
+        <div class="pill-list" id="lineage"></div>
+      </div>
+
+      <div class="section">
+        <h2>视图切换</h2>
+        <div class="stage-row">
+          <button id="executeStageBtn" title="向前查看该执行逻辑图对应的 Execute Graph">← Execute</button>
+          <button id="runtimeStageBtn" class="active" title="查看 Runtime Execution Graph">Runtime</button>
+          <button id="swimlaneStageBtn" title="向后查看该执行逻辑图对应的泳道图">Swimlane →</button>
+        </div>
+        <div class="sub" id="stageNote">当前为执行逻辑图。</div>
+      </div>
+
+      <div class="section">
+        <h2>过滤</h2>
+        <label for="search">搜索 kernel / task</label>
+        <input id="search" placeholder="例如 q_proj 或 r2t18" />
+        <label for="coreFilter">Core target</label>
+        <select id="coreFilter">
+          <option value="all">全部</option>
+          <option value="aic">AIC</option>
+          <option value="aiv">AIV</option>
+          <option value="mix">MIX</option>
+          <option value="unknown">Unknown</option>
+        </select>
+        <label for="ringFilter">Ring / scope</label>
+        <select id="ringFilter">
+          <option value="all">全部</option>
+        </select>
+        <label for="durationFilter">最小 duration_us</label>
+        <input id="durationFilter" type="number" min="0" step="1" value="0" />
+        <label for="hopFilter">选中节点邻域深度</label>
+        <select id="hopFilter">
+          <option value="0">不限制</option>
+          <option value="1">1 hop</option>
+          <option value="2">2 hops</option>
+          <option value="3">3 hops</option>
+        </select>
+        <div class="btn-row">
+          <button id="resetBtn">重置视图</button>
+          <button id="fitBtn">适应画布</button>
+        </div>
+        <div class="btn-row">
+          <button id="criticalBtn">关键路径</button>
+          <button id="allBtn">全量 DAG</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>图例</h2>
+        <div class="legend">
+          <div><span class="swatch" style="background: var(--aic)"></span>AIC</div>
+          <div><span class="swatch" style="background: var(--aiv)"></span>AIV</div>
+          <div><span class="swatch" style="background: var(--mix)"></span>MIX</div>
+          <div><span class="swatch" style="background: var(--hot)"></span>慢 task</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>统计</h2>
+        <div class="metric-grid" id="metrics"></div>
+      </div>
+    </aside>
+
+    <main class="canvas-wrap">
+      <div class="graph-tools" aria-label="画布缩放"><button id="graphZoomOut" aria-label="缩小执行图">−</button><button id="graphZoomIn" aria-label="放大执行图">+</button><button id="graphFit" aria-label="适应画布">适合</button></div>
+      <svg id="graphSvg" role="img" aria-label="Runtime Execution Graph"></svg>
+      <div class="floating" id="viewportHint">准备渲染</div>
+    </main>
+
+    <aside class="right">
+      <div class="section">
+        <h2>节点详情</h2>
+        <div id="details" class="muted">选择一个节点查看 kernel、依赖、timing 和参数。</div>
+      </div>
+      <div class="section">
+        <h2 id="topListTitle">最长耗时任务</h2>
+        <p class="muted" id="topListSummary" role="status"></p>
+        <div class="list" id="topList"></div>
+      </div>
+    </aside>
+  </div>
+
+  <script src="assets/runtime-public.js"></script>
+  <script>
+    const svg = document.getElementById('graphSvg');
+    const subtitle = document.getElementById('subtitle');
+    const metricsEl = document.getElementById('metrics');
+    const detailsEl = document.getElementById('details');
+    const topListEl = document.getElementById('topList');
+    const lineageEl = document.getElementById('lineage');
+    const searchEl = document.getElementById('search');
+    const coreFilterEl = document.getElementById('coreFilter');
+    const ringFilterEl = document.getElementById('ringFilter');
+    const durationFilterEl = document.getElementById('durationFilter');
+    const hopFilterEl = document.getElementById('hopFilter');
+    const hintEl = document.getElementById('viewportHint');
+    const stageNoteEl = document.getElementById('stageNote');
+
+    let graph = window.RUNTIME_EXECUTION_GRAPH_DATA;
+    let layout = null;
+    let selectedId = null;
+    let viewMode = 'all';
+    let stageMode = 'runtime';
+    let viewBox = { x: 0, y: 0, w: 1400, h: 900 };
+    let drag = null;
+
+    const colors = {
+      aic: '#dceaff',
+      aiv: '#fff0df',
+      mix: '#dcf4eb',
+      host: '#eeeeee',
+      aicpu: '#e8e0ff',
+      unknown: '#f2f4f8'
+    };
+    const strokes = {
+      aic: '#3d7dd8',
+      aiv: '#d4832f',
+      mix: '#2f9d75',
+      host: '#8a8f98',
+      aicpu: '#7b61d1',
+      unknown: '#aeb7c7'
+    };
+
+    function durationOf(node) {
+      return Number(node.timing?.summary?.duration_us || 0);
+    }
+
+    function instanceCount(node) {
+      return Number(node.timing?.summary?.instance_count || 0);
+    }
+
+    function compact(text, max = 22) {
+      const value = String(text || '');
+      return value.length > max ? value.slice(0, max - 1) + '…' : value;
+    }
+
+    function byId() {
+      return new Map(graph.nodes.map(n => [n.id, n]));
+    }
+
+    function buildAdjacency() {
+      const out = new Map();
+      const inc = new Map();
+      graph.nodes.forEach(n => {
+        out.set(n.id, []);
+        inc.set(n.id, []);
+      });
+      graph.edges.forEach(e => {
+        if (out.has(e.source) && inc.has(e.target)) {
+          out.get(e.source).push(e.target);
+          inc.get(e.target).push(e.source);
+        }
+      });
+      return { out, inc };
+    }
+
+    function primaryKernelName(node) {
+      const slots = node.kernel_slots || {};
+      const primary = slots.primary;
+      const entry = primary ? slots[primary] : null;
+      if (entry?.name) return entry.name;
+      if (entry?.func_id != null && entry.func_id >= 0) return `func_${entry.func_id}`;
+      return node.label?.split('(')[0] || 'runtime_task';
+    }
+
+    function aggregateExecuteGraph() {
+      const sourceNodes = graph.nodes;
+      const groups = new Map();
+      sourceNodes.forEach(node => {
+        const name = primaryKernelName(node);
+        const key = `exec:${node.ring_id}:${name}`;
+        const item = groups.get(key) || {
+          id: key,
+          label: `${name}\\nring ${node.ring_id}`,
+          kind: 'execute_call',
+          ring_id: node.ring_id,
+          core_target: node.core_target,
+          sourceIds: [],
+          count: 0,
+          duration: 0,
+          maxDuration: 0
+        };
+        item.sourceIds.push(node.id);
+        item.count += 1;
+        item.duration += durationOf(node);
+        item.maxDuration = Math.max(item.maxDuration, durationOf(node));
+        if (item.core_target !== node.core_target) item.core_target = 'mix';
+        groups.set(key, item);
+      });
+      const nodeToGroup = new Map();
+      groups.forEach(group => group.sourceIds.forEach(id => nodeToGroup.set(id, group.id)));
+      const edgeMap = new Map();
+      graph.edges.forEach(edge => {
+        const src = nodeToGroup.get(edge.source);
+        const dst = nodeToGroup.get(edge.target);
+        if (!src || !dst || src === dst) return;
+        const key = `${src}->${dst}`;
+        const current = edgeMap.get(key) || {
+          id: `exec-edge:${edgeMap.size}`,
+          source: src,
+          target: dst,
+          edge_type: edge.edge_type,
+          count: 0
+        };
+        current.count += 1;
+        edgeMap.set(key, current);
+      });
+      return {
+        nodes: [...groups.values()],
+        edges: [...edgeMap.values()]
+      };
+    }
+
+    function currentStageData() {
+      if (stageMode === 'execute') return aggregateExecuteGraph();
+      return { nodes: graph.nodes, edges: graph.edges };
+    }
+
+    function laneKey(inst) {
+      return `${inst.core_type}:${inst.core_id}`;
+    }
+
+    function coreLaneMap() {
+      const map = new Map();
+      const lanes = graph.metadata?.core_topology?.lanes || [];
+      lanes.forEach(lane => {
+        const label = lane.display_label || `${String(lane.core_type || '').toUpperCase()} ${lane.type_local_id || lane.core_id + 1}`;
+        map.set(`${lane.core_type}:${lane.core_id}`, {
+          label,
+          order: Number(lane.display_order ?? lane.core_id ?? 0),
+          rawCoreId: lane.core_id
+        });
+      });
+      if (map.size) return map;
+
+      const byType = new Map();
+      graph.nodes.forEach(node => {
+        (node.timing?.instances || []).forEach(inst => {
+          if (!byType.has(inst.core_type)) byType.set(inst.core_type, new Set());
+          byType.get(inst.core_type).add(inst.core_id);
+        });
+      });
+      const typeOrder = { aic: 0, aiv: 1, unknown: 9 };
+      [...byType.keys()].sort((a, b) => (typeOrder[a] ?? 8) - (typeOrder[b] ?? 8) || a.localeCompare(b)).forEach((type, typeIdx) => {
+        [...byType.get(type)].sort((a, b) => a - b).forEach((coreId, idx) => {
+          map.set(`${type}:${coreId}`, {
+            label: `${String(type || 'unknown').toUpperCase()} ${idx + 1}`,
+            order: typeIdx * 1000 + idx,
+            rawCoreId: coreId
+          });
+        });
+      });
+      return map;
+    }
+
+    function criticalPathIds() {
+      const nodes = byId();
+      const { inc } = buildAdjacency();
+      const order = graph.integrity?.topological_order?.length
+        ? graph.integrity.topological_order
+        : graph.nodes.map(n => n.id);
+      const score = new Map();
+      const prev = new Map();
+      order.forEach(id => {
+        const preds = inc.get(id) || [];
+        let best = 0;
+        let bestPred = null;
+        preds.forEach(p => {
+          const s = score.get(p) || 0;
+          if (s > best) {
+            best = s;
+            bestPred = p;
+          }
+        });
+        score.set(id, best + durationOf(nodes.get(id)));
+        if (bestPred) prev.set(id, bestPred);
+      });
+      let end = null;
+      let best = -1;
+      score.forEach((value, id) => {
+        if (value > best) {
+          best = value;
+          end = id;
+        }
+      });
+      const path = new Set();
+      while (end) {
+        path.add(end);
+        end = prev.get(end);
+      }
+      return path;
+    }
+
+    function neighborhood(seed, depth) {
+      if (!seed || depth <= 0) return null;
+      const { out, inc } = buildAdjacency();
+      const seen = new Set([seed]);
+      let frontier = [seed];
+      for (let i = 0; i < depth; i += 1) {
+        const next = [];
+        frontier.forEach(id => {
+          [...(out.get(id) || []), ...(inc.get(id) || [])].forEach(n => {
+            if (!seen.has(n)) {
+              seen.add(n);
+              next.push(n);
+            }
+          });
+        });
+        frontier = next;
+      }
+      return seen;
+    }
+
+    function visibleNodeIds(nodes = graph.nodes) {
+      const q = searchEl.value.trim().toLowerCase();
+      const core = coreFilterEl.value;
+      const ring = ringFilterEl.value;
+      const minDuration = Number(durationFilterEl.value || 0);
+      const hop = Number(hopFilterEl.value || 0);
+      const neighbor = stageMode === 'runtime' ? neighborhood(selectedId, hop) : null;
+      const critical = stageMode === 'runtime' && viewMode === 'critical' ? criticalPathIds() : null;
+      const visible = new Set();
+      nodes.forEach(node => {
+        const text = `${node.label} ${node.display_id || ''} ${node.raw_task_id || ''}`.toLowerCase();
+        const matchSearch = !q || text.includes(q);
+        const matchCore = core === 'all' || node.core_target === core;
+        const matchRing = ring === 'all' || String(node.ring_id) === ring;
+        const matchDuration = (node.maxDuration || durationOf(node)) >= minDuration;
+        const matchNeighbor = !neighbor || neighbor.has(node.id);
+        const matchCritical = !critical || critical.has(node.id);
+        if (matchSearch && matchCore && matchRing && matchDuration && matchNeighbor && matchCritical) {
+          visible.add(node.id);
+        }
+      });
+      return visible;
+    }
+
+    function computeLayout(stageData = currentStageData()) {
+      const ids = new Set(stageData.nodes.map(n => n.id));
+      let inc;
+      if (stageMode === 'runtime') {
+        inc = buildAdjacency().inc;
+      } else {
+        inc = new Map(stageData.nodes.map(n => [n.id, []]));
+        stageData.edges.forEach(edge => {
+          if (inc.has(edge.target)) inc.get(edge.target).push(edge.source);
+        });
+      }
+      const order = stageMode === 'runtime'
+        ? (graph.integrity?.topological_order?.filter(id => ids.has(id)) || stageData.nodes.map(n => n.id))
+        : stageData.nodes.map(n => n.id);
+      const layer = new Map();
+      order.forEach(id => {
+        const preds = inc.get(id) || [];
+        const depth = preds.length ? Math.max(...preds.map(p => layer.get(p) || 0)) + 1 : 0;
+        layer.set(id, depth);
+      });
+      const buckets = new Map();
+      stageData.nodes.forEach(node => {
+        const l = layer.get(node.id) || 0;
+        if (!buckets.has(l)) buckets.set(l, []);
+        buckets.get(l).push(node);
+      });
+      buckets.forEach(list => {
+        list.sort((a, b) => {
+          if (a.ring_id !== b.ring_id) return a.ring_id - b.ring_id;
+          return (b.maxDuration || durationOf(b)) - (a.maxDuration || durationOf(a));
+        });
+      });
+      const pos = new Map();
+      const nodeW = 176;
+      const nodeH = 46;
+      const colGap = 235;
+      const rowGap = 68;
+      let maxLayer = 0;
+      let maxRows = 0;
+      buckets.forEach((list, l) => {
+        maxLayer = Math.max(maxLayer, l);
+        maxRows = Math.max(maxRows, list.length);
+        list.forEach((node, i) => {
+          pos.set(node.id, {
+            x: 42 + l * colGap,
+            y: 62 + i * rowGap,
+            w: nodeW,
+            h: nodeH,
+            layer: l
+          });
+        });
+      });
+      return {
+        pos,
+        width: Math.max(1200, 120 + (maxLayer + 1) * colGap),
+        height: Math.max(760, 140 + maxRows * rowGap),
+        nodeW,
+        nodeH
+      };
+    }
+
+    function pathForEdge(a, b) {
+      const x1 = a.x + a.w;
+      const y1 = a.y + a.h / 2;
+      const x2 = b.x;
+      const y2 = b.y + b.h / 2;
+      const dx = Math.max(55, (x2 - x1) * 0.48);
+      return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+    }
+
+    function setViewBox(box) {
+      viewBox = box;
+      svg.setAttribute('viewBox', `${box.x} ${box.y} ${box.w} ${box.h}`);
+    }
+
+    function fitView() {
+      if (!layout) return;
+      const margin = 30;
+      setViewBox({
+        x: 0,
+        y: 0,
+        w: Math.min(layout.width + margin, Math.max(layout.width * .42, 1500)),
+        h: Math.min(layout.height + margin, Math.max(layout.height * .42, 900))
+      });
+    }
+
+    function render() {
+      if (!graph) return;
+      updateStageChrome();
+      if (stageMode === 'swimlane') {
+        renderSwimlane();
+        return;
+      }
+      const stageData = currentStageData();
+      layout = computeLayout(stageData);
+      const visible = visibleNodeIds(stageData.nodes);
+      const maxDuration = Math.max(...graph.nodes.map(durationOf), 1);
+      const selectedEdges = new Set();
+      if (selectedId) {
+        stageData.edges.forEach(e => {
+          if (e.source === selectedId || e.target === selectedId) selectedEdges.add(e.id);
+        });
+      }
+      svg.innerHTML = '';
+      svg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
+
+      const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+      defs.innerHTML = '<marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#94a1b8"></path></marker><marker id="arrowSelected" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#111827"></path></marker>';
+      svg.appendChild(defs);
+
+      const groupLayer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      const edgeLayer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      const nodeLayer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      svg.appendChild(groupLayer);
+      svg.appendChild(edgeLayer);
+      svg.appendChild(nodeLayer);
+
+      const ringBounds = new Map();
+      stageData.nodes.forEach(node => {
+        if (!visible.has(node.id)) return;
+        const p = layout.pos.get(node.id);
+        if (!p) return;
+        const key = node.ring_id;
+        const prev = ringBounds.get(key) || { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+        prev.minX = Math.min(prev.minX, p.x);
+        prev.minY = Math.min(prev.minY, p.y);
+        prev.maxX = Math.max(prev.maxX, p.x + p.w);
+        prev.maxY = Math.max(prev.maxY, p.y + p.h);
+        ringBounds.set(key, prev);
+      });
+      ringBounds.forEach((b, ring) => {
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('x', b.minX - 22);
+        rect.setAttribute('y', b.minY - 38);
+        rect.setAttribute('width', b.maxX - b.minX + 44);
+        rect.setAttribute('height', b.maxY - b.minY + 60);
+        rect.setAttribute('rx', '10');
+        rect.setAttribute('fill', ring % 2 ? 'rgba(232, 240, 252, .75)' : 'rgba(245, 247, 251, .7)');
+        rect.setAttribute('stroke', '#d7dde8');
+        groupLayer.appendChild(rect);
+        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        label.setAttribute('x', b.minX - 10);
+        label.setAttribute('y', b.minY - 16);
+        label.setAttribute('class', 'group-label');
+        label.textContent = `ring ${ring}`;
+        groupLayer.appendChild(label);
+      });
+
+      stageData.edges.forEach(edge => {
+        if (!visible.has(edge.source) || !visible.has(edge.target)) return;
+        const a = layout.pos.get(edge.source);
+        const b = layout.pos.get(edge.target);
+        if (!a || !b) return;
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', pathForEdge(a, b));
+        path.setAttribute('class', `graph-edge ${edge.edge_type === 'explicit_dependency' ? 'explicit' : ''} ${selectedEdges.has(edge.id) ? 'selected' : ''}`);
+        path.setAttribute('marker-end', selectedEdges.has(edge.id) ? 'url(#arrowSelected)' : 'url(#arrow)');
+        edgeLayer.appendChild(path);
+      });
+
+      stageData.nodes.forEach(node => {
+        const p = layout.pos.get(node.id);
+        if (!p) return;
+        const isVisible = visible.has(node.id);
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('class', `graph-node ${node.id === selectedId ? 'selected' : ''} ${isVisible ? '' : 'dimmed'}`);
+        g.setAttribute('transform', `translate(${p.x}, ${p.y})`);
+        g.addEventListener('click', evt => {
+          evt.stopPropagation();
+          selectedId = node.id;
+          render();
+          renderDetails();
+        });
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('width', p.w);
+        rect.setAttribute('height', p.h);
+        rect.setAttribute('fill', colors[node.core_target] || colors.unknown);
+        rect.setAttribute('stroke', durationOf(node) > maxDuration * .72 ? 'var(--hot)' : (strokes[node.core_target] || strokes.unknown));
+        rect.setAttribute('stroke-width', durationOf(node) > maxDuration * .72 ? '2.4' : '1.2');
+        g.appendChild(rect);
+        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        label.setAttribute('x', 10);
+        label.setAttribute('y', 18);
+        label.textContent = compact(node.label, 24);
+        g.appendChild(label);
+        const small = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        small.setAttribute('x', 10);
+        small.setAttribute('y', 35);
+        small.setAttribute('class', 'small');
+        const metric = stageMode === 'execute'
+          ? `${node.count} tasks · max ${Number(node.maxDuration || 0).toFixed(1)}us`
+          : `${node.core_target.toUpperCase()} · ${node.display_id} · ${durationOf(node).toFixed(1)}us`;
+        small.textContent = metric;
+        g.appendChild(small);
+        if (node.spmd || node.block_num > 1) {
+          const badge = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          badge.setAttribute('x', p.w - 36);
+          badge.setAttribute('y', 18);
+          badge.setAttribute('class', 'small');
+          badge.textContent = `x${node.block_num}`;
+          g.appendChild(badge);
+        }
+        nodeLayer.appendChild(g);
+      });
+
+      const visibleEdges = stageData.edges.filter(e => visible.has(e.source) && visible.has(e.target)).length;
+      hintEl.textContent = `${visible.size} nodes / ${visibleEdges} edges`;
+      renderMetrics(visible, visibleEdges, stageData.nodes);
+      renderTopList();
+    }
+
+    function renderSwimlane() {
+      layout = null;
+      const visible = visibleNodeIds(graph.nodes);
+      svg.innerHTML = '';
+      const rows = [];
+      graph.nodes.forEach(node => {
+        if (!visible.has(node.id)) return;
+        (node.timing?.instances || []).forEach(inst => {
+          rows.push({ node, inst });
+        });
+      });
+      const laneInfo = coreLaneMap();
+      const lanes = [...new Set(rows.map(row => laneKey(row.inst)))]
+        .sort((a, b) => {
+          const aa = laneInfo.get(a);
+          const bb = laneInfo.get(b);
+          return (aa?.order ?? 0) - (bb?.order ?? 0);
+        });
+      const laneIndex = new Map(lanes.map((lane, idx) => [lane, idx]));
+      const minT = Math.min(...rows.map(r => Number(r.inst.dispatch_time_us ?? r.inst.start_time_us ?? 0)), 0);
+      const maxT = Math.max(...rows.map(r => Number(r.inst.finish_time_us ?? r.inst.end_time_us ?? 1)), 1);
+      const left = 116;
+      const top = 52;
+      const laneH = 24;
+      const pxPerUs = 9;
+      const width = Math.max(1300, left + (maxT - minT) * pxPerUs + 160);
+      const height = Math.max(760, top + lanes.length * laneH + 90);
+      svg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
+
+      const axis = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      for (let t = Math.ceil(minT / 25) * 25; t <= maxT; t += 25) {
+        const x = left + (t - minT) * pxPerUs;
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', x);
+        line.setAttribute('x2', x);
+        line.setAttribute('y1', top - 24);
+        line.setAttribute('y2', height - 48);
+        line.setAttribute('class', 'time-axis');
+        axis.appendChild(line);
+        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        label.setAttribute('x', x + 4);
+        label.setAttribute('y', top - 30);
+        label.setAttribute('class', 'time-label');
+        label.textContent = `${t.toFixed(0)}us`;
+        axis.appendChild(label);
+      }
+      svg.appendChild(axis);
+
+      lanes.forEach(lane => {
+        const idx = laneIndex.get(lane);
+        const y = top + idx * laneH;
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', 16);
+        text.setAttribute('y', y + 15);
+        text.setAttribute('class', 'lane-label');
+        text.textContent = laneInfo.get(lane)?.label || lane.replace(':', ' core ');
+        const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+        title.textContent = `raw ${lane.replace(':', ' core_id ')}`;
+        text.appendChild(title);
+        svg.appendChild(text);
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', left);
+        line.setAttribute('x2', width - 40);
+        line.setAttribute('y1', y + 18);
+        line.setAttribute('y2', y + 18);
+        line.setAttribute('stroke', '#edf1f6');
+        svg.appendChild(line);
+      });
+
+      rows.forEach(({ node, inst }) => {
+        const lane = laneKey(inst);
+        const y = top + laneIndex.get(lane) * laneH + 4;
+        const start = Number(inst.start_time_us || 0);
+        const end = Number(inst.end_time_us || start + 0.2);
+        const x = left + (start - minT) * pxPerUs;
+        const w = Math.max(3, (end - start) * pxPerUs);
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('x', x);
+        rect.setAttribute('y', y);
+        rect.setAttribute('width', w);
+        rect.setAttribute('height', 15);
+        rect.setAttribute('fill', node.core_target === 'aic' ? colors.aic : node.core_target === 'mix' ? colors.mix : colors.aiv);
+        rect.setAttribute('class', `swimlane-bar ${node.id === selectedId ? 'selected' : ''}`);
+        rect.addEventListener('click', evt => {
+          evt.stopPropagation();
+          selectedId = node.id;
+          render();
+          renderDetails();
+        });
+        svg.appendChild(rect);
+      });
+
+      hintEl.textContent = `${rows.length} bars / ${lanes.length} lanes`;
+      renderMetrics(visible, 0, graph.nodes);
+      renderTopList();
+      if (viewBox.w === 1400 && viewBox.h === 900) {
+        setViewBox({ x: 0, y: 0, w: Math.min(width, 1600), h: Math.min(height, 900) });
+      }
+    }
+
+    function renderMetrics(visible, visibleEdges, nodes = graph.nodes) {
+      const timed = nodes.filter(n => visible.has(n.id) && (n.timing || n.count)).length;
+      const durations = nodes.filter(n => visible.has(n.id)).map(n => n.maxDuration || durationOf(n));
+      const maxDuration = Math.max(...durations, 0);
+      const avgDuration = durations.length ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
+      const cells = [
+        ['Nodes', visible.size],
+        ['Edges', visibleEdges],
+        ['Timed nodes', timed],
+        ['Max us', maxDuration.toFixed(1)],
+        ['Avg us', avgDuration.toFixed(1)],
+        ['Rings', new Set(nodes.filter(n => visible.has(n.id)).map(n => n.ring_id)).size]
+      ];
+      metricsEl.innerHTML = cells.map(([k, v]) => `<div class="metric"><strong>${v}</strong><span>${k}</span></div>`).join('');
+    }
+
+    function timingDescription() {
+      return graph.data_lineage?.level === 'L2'
+        ? '时间由输入记录换算与汇总，随派生对象呈现；本页面未执行新的采集，不能据此宣称实测收益。'
+        : '时间按输入记录及其单位呈现；缺失或来源不明的记录不能支持性能结论。';
+    }
+
+    function renderDetails() {
+      if (!selectedId) {
+        detailsEl.innerHTML = '选择一个节点查看 kernel、依赖、timing 和参数。';
+        return;
+      }
+      const stageData = currentStageData();
+      const node = stageMode === 'execute'
+        ? stageData.nodes.find(n => n.id === selectedId)
+        : byId().get(selectedId);
+      if (!node) return;
+      const edges = stageMode === 'execute' ? stageData.edges : graph.edges;
+      const incoming = edges.filter(e => e.target === node.id);
+      const outgoing = edges.filter(e => e.source === node.id);
+      if (stageMode === 'execute') {
+        detailsEl.innerHTML = `
+          <div class="detail-title">${node.label.replace('\\n', ' · ')}</div>
+          <p class="muted">${timingDescription()}</p>
+          <div class="kv"><span>view</span><span>Derived Execute Graph Preview</span><span>runtime tasks</span><span>${node.count}</span><span>core</span><span>${node.core_target}</span><span>ring</span><span>${node.ring_id}</span><span>max duration</span><span>${Number(node.maxDuration || 0).toFixed(3)} us</span><span>fanin / fanout</span><span>${incoming.length} / ${outgoing.length}</span></div>
+          <div class="pill-list"><span class="pill">aggregated call node</span></div>
+        `;
+        return;
+      }
+      const slots = node.kernel_slots || {};
+      const slotText = ['aic', 'aiv0', 'aiv1'].map(k => {
+        const s = slots[k];
+        if (!s || s.func_id == null || s.func_id < 0) return `${k}: -`;
+        return `${k}: ${s.name || 'func_' + s.func_id}`;
+      }).join('<br>');
+      const args = (node.args || []).slice(0, 8).map(a => {
+        const shape = Array.isArray(a.shape) ? `[${a.shape.join(',')}]` : '';
+        return `<div class="item"><strong>arg${a.idx} ${a.direction}</strong><span class="muted">${a.dtype || ''} ${shape} ${a.tensor_id ? 'tensor:' + a.tensor_id : ''}</span></div>`;
+      }).join('');
+      detailsEl.innerHTML = `
+        <div class="detail-title">${node.label}</div>
+        <p class="muted">${timingDescription()}</p>
+        <div class="kv"><span>task</span><span>${node.display_id} / ${node.raw_task_id}</span><span>core</span><span>${node.core_target}</span><span>ring</span><span>${node.ring_id}</span><span>block_num</span><span>${node.block_num || 1}</span><span>duration</span><span>${durationOf(node).toFixed(3)} us</span><span>instances</span><span>${instanceCount(node)}</span><span>fanin / fanout</span><span>${incoming.length} / ${outgoing.length}</span><span>kernel slots</span><span>${slotText}</span></div>
+        <div class="pill-list"><span class="pill">fanin ${incoming.length}</span><span class="pill">fanout ${outgoing.length}</span><span class="pill">${node.kind}</span></div>
+        <div class="list">${args || '<span class="muted">无参数摘要</span>'}</div>
+      `;
+    }
+
+    function renderTopList() {
+      const data = currentStageData().nodes;
+      const visible = visibleNodeIds(data);
+      const duration = node => Number(node.maxDuration ?? durationOf(node));
+      const candidates = data.filter(node => visible.has(node.id) && Number.isFinite(duration(node)) && duration(node) > 0);
+      const longest = candidates.reduce((max, node) => Math.max(max, duration(node)), 0);
+      // Compare source values, not rounded labels; never invent timing differences.
+      const tied = candidates.filter(node => duration(node) === longest).sort((a, b) => {
+        const left = String(a.raw_task_id ?? a.id);
+        const right = String(b.raw_task_id ?? b.id);
+        if (/^\d+$/.test(left) && /^\d+$/.test(right)) {
+          const x = BigInt(left), y = BigInt(right);
+          if (x !== y) return x < y ? -1 : 1;
+        }
+        return String(a.id) < String(b.id) ? -1 : String(a.id) > String(b.id) ? 1 : 0;
+      });
+      const top = tied.slice(0, 12);
+      const grouped = stageMode === 'execute';
+      const unit = grouped ? '调用组' : '任务';
+      document.getElementById('topListTitle').textContent = `最长耗时${unit}`;
+      document.getElementById('topListSummary').textContent = !top.length
+        ? `当前筛选范围没有可比较耗时的${unit}。`
+        : `${grouped ? '组内任务最大耗时' : '当前筛选最大耗时'} ${longest.toFixed(2)} µs · ${tied.length} 个${unit}${tied.length > 1 ? '并列' : '达到最大值'}，显示${tied.length > top.length ? '其中' : '全部'} ${top.length} 个。`;
+      topListEl.innerHTML = top.map(node => `
+        <button class="item" type="button" data-id="${node.id}">
+          <strong>${compact(node.label, 34)}</strong>
+          <span class="muted">${Number(node.maxDuration || durationOf(node)).toFixed(2)} us · ${node.core_target} · ${node.display_id || node.count + ' tasks'}</span>
+        </button>
+      `).join('');
+      topListEl.querySelectorAll('.item').forEach(el => {
+        el.addEventListener('click', () => {
+          selectedId = el.dataset.id;
+          render();
+          renderDetails();
+          centerOn(selectedId);
+        });
+      });
+    }
+
+    function centerOn(id) {
+      if (stageMode === 'swimlane') return;
+      const p = layout?.pos.get(id);
+      if (!p) return;
+      setViewBox({
+        ...viewBox,
+        x: Math.max(0, p.x - viewBox.w / 2),
+        y: Math.max(0, p.y - viewBox.h / 2)
+      });
+    }
+
+    function populateControls() {
+      subtitle.textContent = `${graph.title} · ${graph.metadata?.derived_counts?.nodes || graph.nodes.length} nodes`;
+      lineageEl.textContent = '任务依赖与时间记录分别检查；关联成立不等于根因已确定。';
+      const rings = [...new Set(graph.nodes.map(n => n.ring_id))].sort((a, b) => a - b);
+      ringFilterEl.innerHTML = '<option value="all">全部</option>' + rings.map(r => `<option value="${r}">ring ${r}</option>`).join('');
+    }
+
+    function updateStageChrome() {
+      document.getElementById('executeStageBtn').classList.toggle('active', stageMode === 'execute');
+      document.getElementById('runtimeStageBtn').classList.toggle('active', stageMode === 'runtime');
+      document.getElementById('swimlaneStageBtn').classList.toggle('active', stageMode === 'swimlane');
+      const notes = {
+        execute: '向前视图：由 Runtime DAG 聚合得到的 Execute Graph 参考预览。',
+        runtime: '当前视图：CodeGen 后 runtime task 依赖 DAG。',
+        swimlane: '向后视图：由 timing instances 派生的泳道图参考预览。'
+      };
+      stageNoteEl.textContent = notes[stageMode];
+    }
+
+    function boot() {
+      if (!graph) {
+        subtitle.textContent = '未找到默认数据。请从左侧选择 JSON 文件。';
+        return;
+      }
+      populateControls();
+      layout = computeLayout();
+      fitView();
+      render();
+      renderDetails();
+    }
+
+    ['input', 'change'].forEach(evt => {
+      searchEl.addEventListener(evt, render);
+      durationFilterEl.addEventListener(evt, render);
+    });
+    coreFilterEl.addEventListener('change', render);
+    ringFilterEl.addEventListener('change', render);
+    hopFilterEl.addEventListener('change', render);
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      searchEl.value = '';
+      coreFilterEl.value = 'all';
+      ringFilterEl.value = 'all';
+      durationFilterEl.value = '0';
+      hopFilterEl.value = '0';
+      selectedId = null;
+      viewMode = 'all';
+      stageMode = 'runtime';
+      fitView();
+      render();
+      renderDetails();
+    });
+    document.getElementById('fitBtn').addEventListener('click', fitView);
+    document.getElementById('criticalBtn').addEventListener('click', () => {
+      viewMode = 'critical';
+      render();
+    });
+    document.getElementById('allBtn').addEventListener('click', () => {
+      viewMode = 'all';
+      render();
+    });
+    document.getElementById('executeStageBtn').addEventListener('click', () => {
+      stageMode = 'execute';
+      selectedId = null;
+      layout = computeLayout(currentStageData());
+      fitView();
+      render();
+      renderDetails();
+    });
+    document.getElementById('runtimeStageBtn').addEventListener('click', () => {
+      stageMode = 'runtime';
+      selectedId = null;
+      layout = computeLayout(currentStageData());
+      fitView();
+      render();
+      renderDetails();
+    });
+    document.getElementById('swimlaneStageBtn').addEventListener('click', () => {
+      stageMode = 'swimlane';
+      selectedId = null;
+      setViewBox({ x: 0, y: 0, w: 1500, h: 900 });
+      render();
+      renderDetails();
+    });
+    svg.addEventListener('click', evt => {
+      if (evt.target.closest && evt.target.closest('.graph-node, .swimlane-bar')) return;
+      selectedId = null;
+      render();
+      renderDetails();
+    });
+    svg.addEventListener('wheel', evt => {
+      evt.preventDefault();
+      const factor = evt.deltaY > 0 ? 1.12 : 0.88;
+      const rect = svg.getBoundingClientRect();
+      const mx = viewBox.x + (evt.clientX - rect.left) / rect.width * viewBox.w;
+      const my = viewBox.y + (evt.clientY - rect.top) / rect.height * viewBox.h;
+      const nw = viewBox.w * factor;
+      const nh = viewBox.h * factor;
+      setViewBox({
+        x: mx - (mx - viewBox.x) * factor,
+        y: my - (my - viewBox.y) * factor,
+        w: nw,
+        h: nh
+      });
+    }, { passive: false });
+    svg.addEventListener('pointerdown', evt => {
+      if (evt.target.closest && evt.target.closest('.graph-node, .swimlane-bar')) return;
+      drag = { x: evt.clientX, y: evt.clientY, box: { ...viewBox } };
+      svg.setPointerCapture(evt.pointerId);
+    });
+    svg.addEventListener('pointermove', evt => {
+      if (!drag) return;
+      const rect = svg.getBoundingClientRect();
+      const dx = (evt.clientX - drag.x) / rect.width * drag.box.w;
+      const dy = (evt.clientY - drag.y) / rect.height * drag.box.h;
+      setViewBox({ ...drag.box, x: drag.box.x - dx, y: drag.box.y - dy });
+    });
+    svg.addEventListener('pointerup', () => { drag = null; });
+    document.getElementById('fileInput').addEventListener('change', evt => {
+      const file = evt.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        graph = JSON.parse(reader.result);
+        selectedId = null;
+        viewMode = 'all';
+        stageMode = 'runtime';
+        populateControls();
+        layout = computeLayout();
+        fitView();
+        render();
+        renderDetails();
+      };
+      reader.readAsText(file);
+    });
+
+    document.querySelectorAll('.compact-panels button').forEach(button => button.addEventListener('click', () => {
+      document.querySelector('.app').dataset.panel = button.dataset.panel;
+      document.querySelectorAll('.compact-panels button').forEach(b => b.setAttribute('aria-pressed', String(b === button)));
+    }));
+    for (const [id, factor] of [['graphZoomIn', 0.7], ['graphZoomOut', 1.4]]) {
+      document.getElementById(id).addEventListener('click', () => {
+        setViewBox({x:viewBox.x+viewBox.w*(1-factor)/2,y:viewBox.y+viewBox.h*(1-factor)/2,w:viewBox.w*factor,h:viewBox.h*factor});
+      });
+    }
+    document.getElementById('graphFit').addEventListener('click', () => { fitView(); render(); });
+    svg.addEventListener('pointercancel', () => { drag = null; });
+    boot();
+  </script>
+<script src="../../_shared/entry-shell.js?v=825d3e9441695dc2" data-entry="runtime-execution-graph-explorer" data-mode="compact" defer></script>
+</body>
+</html>

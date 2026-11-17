@@ -1,0 +1,72 @@
+name: Deploy reviewed static snapshot
+on:
+  push:
+    branches: [main]
+permissions: {}
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  admission:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: |
+          test "$GITHUB_REPOSITORY" = 'wangnaiyu/pto-design-lab'
+          test "$GITHUB_EVENT_NAME" = 'push'
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test "$GITHUB_RUN_ATTEMPT" = '1'
+  snapshot:
+    needs: admission
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Collect static files only; never run a site build
+        run: python3 -B .github/scripts/pages_verify.py collect --root "$GITHUB_WORKSPACE" --output "$RUNNER_TEMP/site"
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
+        with:
+          path: ${{ runner.temp }}/site
+  deploy:
+    needs: snapshot
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
+  verify:
+    needs: deploy
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Reject a superseded target before checking content
+        run: |
+          test "$GITHUB_SHA" = "$(git ls-remote https://github.com/wangnaiyu/pto-design-lab.git refs/heads/main | cut -f1)"
+      - name: Verify deployed bytes; interaction approval remains separate
+        run: |
+          python3 -B .github/scripts/pages_verify.py verify --root "$GITHUB_WORKSPACE" --allow-network \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --report "$RUNNER_TEMP/pages-bytes.json"
+      - name: Reject a superseded target after checking content
+        run: |
+          test "$GITHUB_SHA" = "$(git ls-remote https://github.com/wangnaiyu/pto-design-lab.git refs/heads/main | cut -f1)"
+      - name: Keep public target verification result (no private source or approval data)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pages-bytes-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/pages-bytes.json
+          if-no-files-found: error
+          retention-days: 7

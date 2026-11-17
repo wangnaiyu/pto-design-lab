@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><meta name="description" content="Agent 时代的算子开发体验研究：场景重组、七类可视化设计方式、UX 机会与半年及一年路线。"><title>Agent 时代的算子开发体验 · 研究报告</title><style>
+:root{--paper:#faf9f5;--ink:#242f30;--muted:#626d6a;--accent:#176756;--line:#d9ddd5;--wash:#eff2eb;--serif:Georgia,'Songti SC','Noto Serif CJK SC',serif;--sans:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif}*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:30px}body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.9}a{color:var(--accent);text-decoration-thickness:1px;text-underline-offset:4px}a:hover{text-decoration:underline}a:focus-visible,button:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--accent);outline-offset:4px}.skip{position:fixed;top:-70px;left:20px;background:var(--ink);color:white;padding:10px;z-index:10}.skip:focus{top:10px}.masthead{max-width:1420px;margin:auto;padding:25px 48px;display:flex;justify-content:space-between;gap:20px;align-items:center;border-bottom:1px solid var(--line);font-size:12px;letter-spacing:.12em}.masthead strong{font-size:13px}.actions{display:flex;gap:24px;align-items:center;letter-spacing:0}button{font:inherit;background:transparent;border:0;color:var(--accent);cursor:pointer;padding:4px 0;text-decoration:underline;text-underline-offset:4px}.cover{max-width:1420px;margin:auto;padding:78px 48px 64px;display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:70px}.eyebrow{font-size:12px;color:var(--accent);letter-spacing:.19em;font-weight:650;margin:0 0 24px}h1{font-family:var(--serif);font-size:clamp(40px,4.4vw,64px);font-weight:600;letter-spacing:-.035em;line-height:1.27;margin:0 0 26px}.subtitle{font-size:21px;margin:0;color:var(--muted);letter-spacing:.025em}.cover-note{align-self:end;border-top:3px solid var(--accent);padding-top:18px;font-size:14px;color:var(--muted)}.cover-note strong{display:block;color:var(--ink);font-size:16px;margin-bottom:12px}.cover-note p{margin:8px 0}.cover-note time{font-variant-numeric:tabular-nums}.thesis{max-width:1324px;margin:0 auto 56px;padding:32px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);display:grid;grid-template-columns:210px 1fr;gap:40px}.thesis-label{font-size:13px;color:var(--accent);letter-spacing:.1em}.thesis p{font-family:var(--serif);font-size:27px;line-height:1.65;margin:0;max-width:930px}.layout{max-width:1420px;padding:0 48px;margin:auto;display:grid;grid-template-columns:210px minmax(0,1fr);gap:56px}.contents{position:sticky;top:26px;align-self:start;max-height:calc(100vh - 50px);overflow:auto;padding:0 14px 24px 0}.contents summary{font-size:12px;letter-spacing:.14em;color:var(--muted);padding-bottom:14px;cursor:pointer}.contents a{display:flex;gap:12px;font-size:12px;line-height:1.55;padding:8px 0;text-decoration:none;color:var(--muted);border-left:2px solid transparent;padding-left:10px}.contents a span{font-variant-numeric:tabular-nums;opacity:.65;flex:none}.contents a[aria-current="location"]{border-color:var(--accent);color:var(--accent);font-weight:650}.contents a:hover{color:var(--accent)}main{min-width:0}.chapter{padding-bottom:56px;margin-bottom:48px;border-bottom:1px solid var(--line);scroll-margin-top:28px}.chapter-heading{display:flex;gap:20px;align-items:baseline;margin-bottom:26px}.chapter-number{font-family:Georgia,serif;font-size:24px;color:var(--accent)}h2{font-family:var(--serif);font-size:31px;line-height:1.45;letter-spacing:-.02em;margin:0}h3{font-size:20px;line-height:1.6;margin:40px 0 20px}p{margin:18px 0}li{margin:10px 0}ul,ol{padding-left:1.4em}strong{font-weight:650}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.84em;overflow-wrap:anywhere;background:#ecefe8;padding:2px 4px;border-radius:3px}pre{white-space:pre-wrap;overflow-wrap:anywhere;padding:22px;background:var(--wash);line-height:1.8}pre code{background:none;padding:0}.table-scroll{overflow-x:auto;margin:26px 0 30px;border-top:2px solid var(--ink);border-bottom:1px solid var(--line)}table{border-collapse:collapse;width:100%;font-size:14px;line-height:1.75;min-width:650px}th{text-align:left;font-weight:650;padding:15px 13px;background:var(--wash);vertical-align:top}td{vertical-align:top;padding:16px 13px;border-top:1px solid var(--line);overflow-wrap:anywhere}td:first-child{font-weight:550;min-width:112px}tr:nth-child(even) td{background:rgba(239,242,235,.36)}#chapter-2 table{min-width:820px}#chapter-3 table,#chapter-7 table{min-width:820px}#chapter-13{font-size:14px}#chapter-13 li{overflow-wrap:anywhere}.flow{margin:30px 0;padding:25px 22px;background:var(--wash)}figcaption{font-size:13px;color:var(--muted);margin-bottom:20px}.flow ol{list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;padding:0;margin:0;counter-reset:steps}.flow li{counter-increment:steps;border-top:1px solid #98b0a5;padding-top:10px;margin:0;font-size:15px;font-weight:550}.flow li:before{content:counter(steps,decimal-leading-zero) ' / ';color:var(--accent);font-size:12px}.feedback{color:var(--accent);font-size:13px;border-top:1px dashed #98b0a5;padding-top:15px;margin-top:23px}.caption{font-size:12px;color:var(--muted);margin-bottom:0}.visual-vocabulary{margin:26px 0 32px}.visual-vocabulary figcaption span{color:var(--ink);font-weight:600;margin-right:16px}.vocabulary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0}.visual-sample{padding:18px 10px 14px;border-top:1px solid var(--line)}.visual-sample svg{display:block;width:100%;height:100px;fill:none;stroke:var(--accent);stroke-width:1.7}.visual-sample svg .fill{fill:#a9c9b8}.visual-sample>span{display:block;text-align:center;font-size:12px;color:var(--muted)}.footer{max-width:1324px;margin:0 auto;padding:0 0 40px;display:flex;justify-content:space-between;gap:20px;color:var(--muted);font-size:12px}.print-only{display:none}@media(min-width:1500px){.layout{gap:70px}.chapter p{max-width:930px}}@media(max-width:1000px){.cover{grid-template-columns:1fr;gap:30px;padding-top:50px}.cover-note{max-width:600px}.thesis{margin-left:32px;margin-right:32px;grid-template-columns:1fr;gap:12px}.layout{padding:0 32px;grid-template-columns:1fr}.contents{position:static;max-height:none;border-bottom:1px solid var(--line);margin-bottom:0}.contents nav{display:grid;grid-template-columns:1fr 1fr;gap:0 20px}.footer{margin:0 32px}.cover{padding-left:32px;padding-right:32px}.masthead{padding-left:32px;padding-right:32px}}@media(max-width:600px){body{font-size:15px}.masthead{padding:18px 20px;letter-spacing:.04em}.masthead>span{max-width:155px}.actions{gap:14px}.cover{padding:42px 20px 34px}.subtitle{font-size:17px}.cover-note{font-size:13px}h1{font-size:39px}.thesis{margin:0 20px 34px;padding:24px 0}.thesis p{font-size:22px}.layout{padding:0 20px;gap:30px}.contents nav{grid-template-columns:1fr}.chapter{margin-bottom:30px;padding-bottom:34px}.chapter-heading{gap:13px}h2{font-size:25px}h3{font-size:19px}table{font-size:13px}.vocabulary-grid{grid-template-columns:repeat(2,1fr)}.flow{padding:20px 16px}.flow ol{grid-template-columns:repeat(2,minmax(0,1fr))}.footer{margin:0 20px;display:block}.table-scroll{position:relative}.chapter-number{font-size:21px}}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}@media print{@page{size:A4 landscape;margin:16mm}html{scroll-behavior:auto}body{background:white;font-size:10pt;line-height:1.6}.masthead,.contents,.actions,.skip,.footer a{display:none}.cover{display:block;padding:0 0 22px}.cover h1{font-size:32pt}.cover-note{border:0;margin-top:20px;padding:0}.thesis{margin:0 0 20px;grid-template-columns:120px 1fr;gap:20px;padding:18px 0}.thesis p{font-size:17pt}.layout{display:block;padding:0}.chapter{padding-bottom:20px;margin-bottom:25px}.chapter-heading{break-after:avoid}h2{font-size:20pt}h3{font-size:14pt;break-after:avoid}.table-scroll{overflow:visible}table,#chapter-2 table,#chapter-3 table,#chapter-7 table{min-width:0;font-size:9pt;line-height:1.5}th,td{padding:8px;min-width:0!important}thead{display:table-header-group}tr{break-inside:avoid}a{color:inherit}pre{font-size:9pt}.flow,.visual-vocabulary{break-inside:avoid}.vocabulary-grid{grid-template-columns:repeat(7,1fr)}.visual-sample svg{height:65px}.visual-sample>span{font-size:8pt}.footer{padding:10px 0}.print-only{display:block}}
+
+/* Computational visual vocabulary — scoped editorial figures, no product UI tokens. */
+.computational-atlas{--diagram-ink:var(--ink);--diagram-blue:var(--accent);background:var(--paper);border-top:2px solid var(--accent);border-bottom:1px solid var(--line);margin:30px 0 38px;padding:24px 20px 16px;color:var(--diagram-ink)}
+.computational-atlas figcaption{display:flex;justify-content:space-between;align-items:end;gap:22px;margin:0 0 26px}.computational-atlas figcaption strong{display:block;font-family:var(--sans);font-size:27px;letter-spacing:-.04em;line-height:1.4;margin-top:7px}.computational-atlas figcaption .atlas-kicker{display:block;font-size:9px;letter-spacing:.16em;font-weight:600;color:var(--muted);margin:0}.computational-atlas figcaption p{font-size:11px;line-height:1.8;color:var(--muted);margin:0;max-width:350px}
+.computational-atlas .vocabulary-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:0}.computational-atlas .visual-sample{grid-column:span 3;border-top:0;border-left:1px solid var(--line);padding:0 13px 20px;min-width:0}.computational-atlas .visual-sample:first-child{border-left:0;padding-left:0}.computational-atlas .visual-sample:nth-child(n+5){grid-column:span 4;border-top:1px solid var(--line);padding-top:24px}.computational-atlas .visual-sample:nth-child(5){border-left:0;padding-left:0}.sample-heading{display:flex;align-items:baseline;gap:9px}.sample-number{font-family:var(--sans);font-size:26px;line-height:1.2;font-weight:650;letter-spacing:-.06em;color:var(--accent)}.sample-heading h4{font-size:15px;font-weight:650;margin:0;line-height:1.5;letter-spacing:-.03em}.computational-atlas .sample-method{font-size:10px;color:var(--muted);line-height:1.8;margin:9px 0 4px;min-height:36px}.computational-atlas .sample-description{font-size:11px;line-height:1.85;color:var(--muted);margin:7px 0 0}.computational-atlas .visual-sample svg{display:block;width:100%;height:auto;aspect-ratio:320/225;fill:none;stroke:none;overflow:visible}.computational-atlas svg .gridline{stroke:#dce3d5;stroke-width:.7}.computational-atlas svg .solid{stroke:var(--paper);stroke-width:.7;stroke-linejoin:round}.computational-atlas svg .hair{stroke:#b1c0ac;stroke-width:1}.computational-atlas svg .signal{fill:none;stroke:var(--accent);stroke-width:1.8}.computational-atlas svg .counter{fill:none;stroke:#8b9c85;stroke-width:1.3;stroke-dasharray:4 3}.computational-atlas svg .guide{stroke:#b5c4ae;stroke-width:1;stroke-dasharray:3 3}.computational-atlas svg .dimension{stroke:#8b9f83;stroke-width:1}.computational-atlas svg .axis{stroke:#7b9473;stroke-width:1}.computational-atlas svg .trajectory{fill:none;stroke:var(--accent);stroke-width:2.4}.computational-atlas svg text{stroke:none;fill:var(--muted);font-family:Georgia,'Times New Roman',serif;font-size:14px}.atlas-footnote{display:flex;justify-content:space-between;gap:18px;border-top:1px solid var(--line);padding-top:14px;font-size:9px;letter-spacing:.12em;color:var(--muted)}
+@media(max-width:1200px){.computational-atlas .visual-sample{grid-column:span 6;border-top:1px solid var(--line);padding:20px 14px}.computational-atlas .visual-sample:nth-child(n+5){grid-column:span 6}.computational-atlas .visual-sample:nth-child(odd){border-left:0;padding-left:0}.computational-atlas .visual-sample:nth-child(-n+2){border-top:0;padding-top:0}.computational-atlas .visual-sample:last-child{grid-column:span 12;max-width:100%}.computational-atlas .visual-sample:last-child svg{max-width:400px;margin:auto}.computational-atlas .sample-method{min-height:0}.sample-heading h4{font-size:17px}}
+@media(max-width:600px){.computational-atlas{padding:20px 15px}.computational-atlas figcaption{display:block}.computational-atlas figcaption p{margin-top:12px}.computational-atlas figcaption strong{font-size:25px}.computational-atlas .visual-sample,.computational-atlas .visual-sample:nth-child(n+5){grid-column:span 12;border-left:0;padding:20px 0!important}.computational-atlas .visual-sample:nth-child(2){border-top:1px solid var(--line)}.computational-atlas .visual-sample:first-child{padding-top:0!important}.computational-atlas .sample-method{font-size:11px}.computational-atlas .sample-description{font-size:12px}.atlas-footnote{display:block;line-height:2}.atlas-footnote span{display:block}}
+@media print{.computational-atlas{break-inside:avoid;padding:12px}.computational-atlas .visual-sample,.computational-atlas .visual-sample:nth-child(n+5){grid-column:span 3;padding:0 10px 12px!important;border-top:0;border-left:1px solid var(--line)}.computational-atlas .visual-sample:nth-child(n+5){grid-column:span 4;border-top:1px solid var(--line);padding-top:16px!important}.computational-atlas .visual-sample:nth-child(1),.computational-atlas .visual-sample:nth-child(5){border-left:0}.computational-atlas .visual-sample svg{height:auto;max-width:none}.computational-atlas .sample-method{min-height:24px}.computational-atlas figcaption strong{font-size:22px}.sample-heading h4{font-size:14px}.sample-number{font-size:23px}.computational-atlas .sample-description{font-size:10px}}
+.computational-atlas figcaption strong{color:var(--ink)}.skip{visibility:hidden}.skip:focus{visibility:visible}</style>
+<!-- PDL-READING-LAYER-START -->
+<link id="pdl-reading-layer" rel="stylesheet" href="../../_shared/report-reading.css?v=825d3e9441695dc2">
+<style id="pdl-reading-dark">
+/* 深色覆盖：由 drafts/preview/dark_overrides.py 从本报告自带 CSS 的字面颜色推导，
+   按明度分档映射到深色色阶。只换颜色，不改尺寸、布局与正文。 */
+:root[data-theme="dark"] code { background: #232327; }
+:root[data-theme="dark"] tr:nth-child(even) td { background: #232327; }
+:root[data-theme="dark"] .flow li { border-top: 1px solid #44444a; }
+:root[data-theme="dark"] .feedback { border-top: 1px dashed #44444a; }
+</style>
+<script id="pdl-reading-layer-js" src="../../_shared/report-reading.js?v=825d3e9441695dc2"></script>
+<!-- PDL-READING-LAYER-END -->
+</head><body><a class="skip" href="#report">跳至正文</a><header class="masthead"><span><strong>PyPTOUX</strong> / DEVELOPER EXPERIENCE</span><div class="actions"><span>研究原文</span><button id="print" type="button">打印报告</button></div></header>
+<div class="cover"><div><p class="eyebrow">RESEARCH REPORT · 2026 / 09</p><h1>Agent 时代的<br>算子开发体验</h1><p class="subtitle">场景重组、UX 机会与一年路线</p></div><aside class="cover-note"><strong>让开发者以可验证的结果<br>推进算子交付</strong><p>研究快照 <time datetime="2026-09-24">2026.09.24</time><br>网页制作 <time datetime="2026-10-09">2026.10.09</time></p><p>研究假设 / 待验证<br>保留事实、推断与能力边界。</p></aside></div>
+<div class="thesis"><div class="thesis-label">核心判断 / THESIS</div><p>UX 的工作重心正在转向：帮助开发者<strong>委托任务、判断结果</strong>，并在必要时<strong>有效介入</strong>。</p></div>
+<div class="layout"><details class="contents" open><summary>阅读目录 · 13 章</summary><nav aria-label="报告章节"><a href="#chapter-1"><span>01</span>核心判断</a><a href="#chapter-2"><span>02</span>哪些是证据，哪些是推断</a><a href="#chapter-3"><span>03</span>重新组织开发场景</a><a href="#chapter-4"><span>04</span>协作方式由任务条件决定</a><a href="#chapter-5"><span>05</span>优化“场景—数据—可视化—Agent 调用”关系</a><a href="#chapter-6"><span>06</span>可视化设计分类、组合与删减标准</a><a href="#chapter-7"><span>07</span>候选体验策略与具体机会</a><a href="#chapter-8"><span>08</span>三个用于验证机会的场景脚本</a><a href="#chapter-9"><span>09</span>半年路线：2026-09 至 2027-03</a><a href="#chapter-10"><span>10</span>一年路线：2027-03 至 2027-09</a><a href="#chapter-11"><span>11</span>UX 护城河与团队职责</a><a href="#chapter-12"><span>12</span>衡量方式与下一步验证</a><a href="#chapter-13"><span>13</span>来源</a></nav></details><main id="report"><p class="scope">本报告以算子开发为主，包含模型目标、精度与交付接口。来源包括用户观察、历史反馈、官方公开材料及 CANNBot 工作流文档；未执行算子生成、NPU 调优或用户实验。内容沿用 2026 年 9 月研究快照，本次仅制作网页呈现。</p><section id="chapter-1" class="chapter"><header class="chapter-heading"><span class="chapter-number">01</span><h2>核心判断</h2></header><p>UX 的交付重心应转向“开发者如何委托任务、检查结果、介入例外，并把有效方法留给团队”。成功的体验可以让用户完全不打开可视化。</p>
+<p>需要同时接受两个判断：常规界面设计与实现的稀缺性确实下降，不能保证 UX 岗位数量不变；但用户少操作界面，不等于结果验收、异常恢复和多人协作自动变简单。新机会必须用任务结果证明，不能仅靠扩大 UX 的定义来主张价值。</p>
+<p>“编码与精度归 Agent，性能归可视化”可以描述局部现状，不能作为稳定边界。更合适的分界是：目标是否明确、结果能否验证、证据是否充分、试错成本是否可接受、任务是否包含需要人选择的取舍。同一项精度或性能任务可以在不同协作模式间切换。</p>
+</section>
+<section id="chapter-2" class="chapter"><header class="chapter-heading"><span class="chapter-number">02</span><h2>哪些是证据，哪些是推断</h2></header><div class="table-scroll" tabindex="0" role="region" aria-label="2. 哪些是证据，哪些是推断：可横向滚动的表格"><table>
+<thead>
+<tr>
+<th scope="col">证据</th>
+<th scope="col">本轮核验</th>
+<th scope="col">能支持什么</th>
+<th scope="col">不能支持什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>用户本轮描述：Agent 已承担设计、代码生成与部分精度迭代，用户能修改 Toolkit</td>
+<td>用户提供的工作观察</td>
+<td>本轮研究问题与假设入口</td>
+<td>用户总体比例、所有任务成功率</td>
+</tr>
+<tr>
+<td>PyPTO issue #1567</td>
+<td>已读取 2026-07-20 原始 CSV 对应行</td>
+<td>用户曾多轮调整 Agent 对 output JSON 的分析和指标理解，随后固化分析脚本；快照中已关闭</td>
+<td>当前问题仍存在、帖中公式就是当前 Toolkit 权威实现、问题普遍程度</td>
+</tr>
+<tr>
+<td>2026-07 模型训推与算子研究</td>
+<td>阅读既有 overview 与 evidence map，未重做原始访谈</td>
+<td>文档可执行性、精度定位、性能解释、跨栈交接是既有反馈主题</td>
+<td>Agent 普及后的最新频率或严重性</td>
+</tr>
+<tr>
+<td>CANNBot <code>pypto-op-perf-tune/SKILL.md</code></td>
+<td>读取本地 workflow 文档</td>
+<td>文档已规定环境检查、精度校验、采集、分析、修改、实测、回退流程</td>
+<td>自动调优实际可靠率或生产部署效果</td>
+</tr>
+<tr>
+<td>CANNBot <code>pypto-op-verify/SKILL.md</code></td>
+<td>读取本地 workflow 文档</td>
+<td>文档包含参考实现、所有输出比较、分模块验证和交付条件</td>
+<td>已自动消除复杂模型精度问题</td>
+</tr>
+<tr>
+<td>KernelAgent 官方仓库</td>
+<td>2026-09-24 在线 README</td>
+<td>项目明确提供 profiling、诊断、改码、精度验证和 benchmark 迭代工作流</td>
+<td>Ascend 同等能力、任意 kernel 最优、生产成功率</td>
+</tr>
+<tr>
+<td>NVIDIA Nsight Compute 官方指南</td>
+<td>2026-09-24 在线文档</td>
+<td>Copilot 可附带 profile 上下文，并从报告条目发起解释</td>
+<td>Copilot 已自主修改并验证所有性能问题</td>
+</tr>
+<tr>
+<td>Anthropic 工具工程文章</td>
+<td>2026-09-24 在线文档</td>
+<td>工具描述、结果表达和真实任务评测可作为 Agent 产品工程对象</td>
+<td>UX 独占这些工作或采用后必然提效</td>
+</tr>
+</tbody></table></div>
+<p>以下范式、机会、优先级与路线均为基于上述材料的研究推断。技术工具存在与真实用户收益之间，仍需要任务实验。</p>
+</section>
+<section id="chapter-3" class="chapter"><header class="chapter-heading"><span class="chapter-number">03</span><h2>重新组织开发场景</h2></header><p>保留设计、开发、精度、性能这些领域标签；产品主流程按“用户这次需要作出什么判断”组织。</p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="3. 重新组织开发场景：可横向滚动的表格"><table>
+<thead>
+<tr>
+<th scope="col">新场景</th>
+<th scope="col">典型触发与完成条件</th>
+<th scope="col">Agent 工作</th>
+<th scope="col">人的关键判断</th>
+<th scope="col">最小必要界面</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>定义可交付目标</td>
+<td>“把模型中的这个热点实现成算子”；明确支持范围与验收规则</td>
+<td>提取模型上下文、补全环境和输入条件</td>
+<td>正确性、覆盖、性能、内存、交期的优先级</td>
+<td>可编辑任务摘要与冲突选项</td>
+</tr>
+<tr>
+<td>获得可运行候选</td>
+<td>输入与参考行为明确；产出可执行实现</td>
+<td>方案、代码、构建与基础测试</td>
+<td>不兼容取舍、范围变化</td>
+<td>结果摘要、必要 diff、失败入口</td>
+</tr>
+<tr>
+<td>确認正确性边界</td>
+<td>某些 shape/dtype/输入失败；确定适用范围</td>
+<td>构造反例、定位首次差异、修复并回归</td>
+<td>golden 是否可信、容差是否合理</td>
+<td>测试覆盖、误差分布、必要的中间张量比较</td>
+</tr>
+<tr>
+<td>选择下一项优化实验</td>
+<td>已能运行，但未达目标；找到值得测试的改动</td>
+<td>采集、生成竞争假设、挑选区分假设的实验</td>
+<td>优化收益与试错预算</td>
+<td>聚焦的泳道/依赖、候选差异、成本对比</td>
+</tr>
+<tr>
+<td>接管异常与恢复工作</td>
+<td>不收敛、环境失败、证据冲突；恢复到可继续状态</td>
+<td>压缩已尝试路径、保存检查点、给出缺口</td>
+<td>是否补数据、换目标或人工修改</td>
+<td>失败摘要、实验历史、可恢复检查点</td>
+</tr>
+<tr>
+<td>验收并回到模型</td>
+<td>单算子改进后需要集成；满足真实模型目标</td>
+<td>跨 shape 回归、端到端验证、打包复现材料</td>
+<td>是否接受适用范围与残余问题</td>
+<td>验收摘要与可比结果</td>
+</tr>
+<tr>
+<td>复用方法与定制工具</td>
+<td>同类任务反复发生；团队无需重新解释</td>
+<td>提取配置、生成视图、候选 Skill 与回归用例</td>
+<td>哪些经验可泛化、哪些只是个人偏好</td>
+<td>可编辑模板、共享与回退、贡献记录</td>
+</tr>
+</tbody></table></div>
+<p>用户角色也要区别：模型开发者优先关注模型效果和使能速度；算子专家需要高带宽探索与快速接管；Toolkit 维护者关心跨版本行为、定制兼容和支持成本。不能给三者强制套用同一套聊天或可视化深度。</p>
+</section>
+<section id="chapter-4" class="chapter"><header class="chapter-heading"><span class="chapter-number">04</span><h2>协作方式由任务条件决定</h2></header><ul>
+<li><strong>直接委托</strong>：目标清楚、验收器可靠、反馈成本低。Agent 执行到验收，用户默认只看结果与适用范围。</li>
+<li><strong>批次检查</strong>：任务长、资源有限，但阶段结果可判断。按实验批次报告，而非每个 tool call 打断用户。</li>
+<li><strong>共同探索</strong>：目标有取舍、证据存在竞争解释。人通过比较、圈选、排除假设参与，Agent 补证据和执行实验。</li>
+<li><strong>人工接管</strong>：观察能力缺失、验证不可用或任务越界。交付检查点、已排除路径、待补信息，允许接管后继续委托。</li>
+</ul>
+<p>默认模式可随项目和用户变化；同一任务也会切换。切换依据应是可观察事件，例如验证失败、预算耗尽或需要修改目标，而非未经校准的“Agent 自信度 90%”。不把每次只读查询、常规生成或可撤销实验都设计为审批。</p>
+</section>
+<section id="chapter-5" class="chapter"><header class="chapter-heading"><span class="chapter-number">05</span><h2>优化“场景—数据—可视化—Agent 调用”关系</h2></header><p>建议主线：</p>
+<figure class="flow"><figcaption>任务推进主线</figcaption><ol><li>目标与约束</li><li>可验收任务</li><li>证据状态</li><li>假设与实验</li><li>执行与验证</li><li>接受 / 继续 / 回退</li></ol><p class="feedback">↶ 经验与失败记录返回任务、证据与实验，支持下一轮判断</p><p class="caption">Agent、工具与可视化围绕共同的任务与证据工作。</p></figure>
+<p>Agent、工具与可视化围绕同一份任务和证据工作，而不是顺序串接的步骤。</p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="5. 优化“场景—数据—可视化—Agent 调用”关系：可横向滚动的表格"><table>
+<thead>
+<tr>
+<th scope="col">层</th>
+<th scope="col">需要定义的契约</th>
+<th scope="col">UX 参与点</th>
+<th scope="col">合作责任</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>目标与验收</td>
+<td>优化谁、什么输入、怎样算成功、资源预算</td>
+<td>意图澄清、默认值、约束冲突表达</td>
+<td>算子/模型专家确认有效标准</td>
+</tr>
+<tr>
+<td>证据与语义</td>
+<td>源码版本、运行身份、设备环境、采集范围、单位与指标定义、缺失项</td>
+<td>用户能否确认“正在讨论同一个对象”</td>
+<td>数据与工具工程提供权威计算和关联</td>
+</tr>
+<tr>
+<td>假设与实验</td>
+<td>观察事实、候选解释、反证、改动、预测与测量分离</td>
+<td>比较与决策、提出反例、选择补采样</td>
+<td>领域专家校验诊断逻辑</td>
+</tr>
+<tr>
+<td>执行与控制</td>
+<td>Skill 输入输出、前置条件、停止/恢复、动作范围</td>
+<td>进度、失败恢复、介入时机</td>
+<td>Agent/平台团队实现与保障</td>
+</tr>
+<tr>
+<td>人的表达与反馈</td>
+<td>摘要、表格、图、代码 diff、圈选/批注</td>
+<td>让当前判断所需证据容易进入和返回</td>
+<td>前端/可视化团队实现</td>
+</tr>
+<tr>
+<td>记忆与评测</td>
+<td>成功与失败条件、适用版本、真实任务验证集</td>
+<td>将用户经验转成可复用与可测的方法</td>
+<td>研究、工程、专家共同维护</td>
+</tr>
+</tbody></table></div>
+<p>示例链路：用户说“解释这一段等待” → 视图选择转成运行身份、对象集合和时间范围 → Agent 查询结构化数据 → 工具返回指标及来源 → Agent 提出假设和补采集动作 → 图中定位证据 → 用户修正范围或提交实验 → 复跑结果进入同一任务。</p>
+<p>关键约束：UI 与 Agent 尽量消费同一份版本化计算结果；不要分别从原始 JSON 临时猜指标定义。图上选区还要保留边界外依赖的补查能力，避免把屏幕裁剪误作诊断范围。</p>
+</section>
+<section id="chapter-6" class="chapter"><header class="chapter-heading"><span class="chapter-number">06</span><h2>可视化设计分类、组合与删减标准</h2></header><h3>6.1 分类层次：让名称直接提示视觉组织方式</h3>
+<p>本节依据用户对分类角度的澄清形成设计工作框架：分类应帮助设计师联想到“信息怎么摆、关系怎么画、注意力怎么引导”。它属于本研究的设计归纳，不是外部标准或已经验证完备的分类体系。</p>
+<p>区分四个维度，避免把它们混成一组类别：</p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="6. 可视化设计分类、组合与删减标准：可横向滚动的表格"><table>
+<thead>
+<tr>
+<th scope="col">维度</th>
+<th scope="col">回答的问题</th>
+<th scope="col">示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>设计分类</td>
+<td>如何组织视觉表达，让用户看清当前问题？</td>
+<td>表达范围、检查关系、候选比较</td>
+</tr>
+<tr>
+<td>表现形式</td>
+<td>用什么图形或信息载体承载？</td>
+<td>卡片、表格、网格、泳道、热力图</td>
+</tr>
+<tr>
+<td>交互方式</td>
+<td>用户如何操作表达、补充意图或继续行动？</td>
+<td>筛选、圈选、标注、联动、跳转、向 Agent 提问</td>
+</tr>
+<tr>
+<td>使用场景</td>
+<td>在什么工作情境中使用？</td>
+<td>设计、开发、精度调试、性能调优、例外接管、交付协作</td>
+</tr>
+</tbody></table></div>
+<p>“表达范围”指表达数据覆盖、计算、影响、调度、并行或资源共享等边界。用户向 Agent 转述某个选区属于交互方式，可配置在各种设计分类之上。“例外接管”和“交付协作”属于场景，不与设计分类并列。</p>
+<h3>6.2 七类可组合的可视化设计方式</h3><figure class="visual-vocabulary computational-atlas" id="visual-vocabulary"><figcaption><div><span class="atlas-kicker">VISUAL LANGUAGE / DESIGN PATTERNS</span><strong>视觉语汇速览</strong></div><p>七种典型的视觉组织方式。<br>以下仅为设计示意，不代表运行数据。</p></figcaption><div class="vocabulary-grid"><div class="visual-sample"><div class="sample-heading"><span class="sample-number">01</span><h4>对象概览</h4></div><p class="sample-method">卡片 · 分区 · 关键值 · 摘要</p><svg viewbox="0 25 320 225" role="img" aria-labelledby="visual-title-1"><title id="visual-title-1">对象概览：用规格卡骨架归纳对象、关键属性与约束。</title><defs><lineargradient id="glass-1" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e7ebe2" stop-opacity=".72"></stop><stop offset="1" stop-color="#d5ded1" stop-opacity=".18"></stop></lineargradient></defs><g opacity=".65"><line x1="20" y1="154" x2="160" y2="84" class="gridline"></line><line x1="20" y1="154" x2="160" y2="224" class="gridline"></line><line x1="38" y1="163" x2="178" y2="93" class="gridline"></line><line x1="38" y1="145" x2="178" y2="215" class="gridline"></line><line x1="56" y1="172" x2="196" y2="102" class="gridline"></line><line x1="56" y1="136" x2="196" y2="206" class="gridline"></line><line x1="74" y1="181" x2="214" y2="111" class="gridline"></line><line x1="74" y1="127" x2="214" y2="197" class="gridline"></line><line x1="92" y1="190" x2="232" y2="120" class="gridline"></line><line x1="92" y1="118" x2="232" y2="188" class="gridline"></line><line x1="110" y1="199" x2="250" y2="129" class="gridline"></line><line x1="110" y1="109" x2="250" y2="179" class="gridline"></line><line x1="128" y1="208" x2="268" y2="138" class="gridline"></line><line x1="128" y1="100" x2="268" y2="170" class="gridline"></line><line x1="146" y1="217" x2="286" y2="147" class="gridline"></line><line x1="146" y1="91" x2="286" y2="161" class="gridline"></line><line x1="164" y1="226" x2="304" y2="156" class="gridline"></line><line x1="164" y1="82" x2="304" y2="152" class="gridline"></line></g><polygon points="130,69 210,44 210,175 130,200" fill="url(#glass-1)" stroke="#c1cec0" stroke-width="1"></polygon><g transform="translate(26 103) matrix(1 -0.5102040816326531 0 1 0 0)"><rect width="49" height="82" rx="2" fill="url(#glass-1)" stroke="#c1cec0"></rect><rect x="9" y="17" width="32" height="4" rx="1" fill="#548776"></rect><rect x="9" y="30" width="29" height="3" rx="1" fill="#b8c7b8"></rect><rect x="9" y="43" width="25" height="3" rx="1" fill="#b8c7b8"></rect><rect x="9" y="56" width="31" height="3" rx="1" fill="#b8c7b8"></rect></g><g transform="translate(229 109) matrix(1 -0.43103448275862066 0 1 0 0)"><rect width="58" height="82" rx="2" fill="url(#glass-1)" stroke="#c1cec0"></rect><rect x="9" y="17" width="41" height="4" rx="1" fill="#548776"></rect><rect x="9" y="30" width="38" height="3" rx="1" fill="#b8c7b8"></rect><rect x="9" y="43" width="34" height="3" rx="1" fill="#b8c7b8"></rect><rect x="9" y="56" width="40" height="3" rx="1" fill="#b8c7b8"></rect></g><g transform="translate(97 61) matrix(1 -.238 0 1 0 0)">
+<rect x="0" y="0" width="105" height="149" rx="3" fill="url(#glass-1)" stroke="#c1cec0"></rect>
+<rect x="12" y="14" width="17" height="17" rx="2" fill="#548776" opacity=".75"></rect>
+<path d="M16 19h9M16 23h9M16 27h5" stroke="#faf9f5" stroke-width="1.4"></path>
+<g fill="#b8c7b8"><rect x="36" y="16" width="55" height="5" rx="1"></rect><rect x="36" y="26" width="34" height="3" rx="1"></rect></g>
+<path d="M12 42h80M12 118h80" class="hair"></path>
+<g fill="#ccd6c6"><rect x="12" y="54" width="23" height="4" rx="1"></rect><rect x="48" y="54" width="42" height="4" rx="1"></rect><rect x="12" y="70" width="19" height="4" rx="1"></rect><rect x="48" y="70" width="35" height="4" rx="1"></rect><rect x="12" y="86" width="25" height="4" rx="1"></rect><rect x="48" y="86" width="44" height="4" rx="1"></rect><rect x="12" y="102" width="20" height="4" rx="1"></rect><rect x="48" y="102" width="29" height="4" rx="1"></rect></g><rect x="12" y="128" width="32" height="9" rx="3" fill="#a0c1ae" opacity=".6"></rect><rect x="50" y="128" width="25" height="9" rx="3" fill="#ccd6c6" opacity=".6"></rect></g></svg><p class="sample-description">用规格卡骨架归纳对象、关键属性与约束。</p></div><div class="visual-sample"><div class="sample-heading"><span class="sample-number">02</span><h4>表达范围</h4></div><p class="sample-method">边界 · 分块 · 覆盖 · 共享区域</p><svg viewbox="0 25 320 225" role="img" aria-labelledby="visual-title-2"><title id="visual-title-2">表达范围：用分块与边界表达计算覆盖及局部作用域。</title><defs><lineargradient id="glass-2" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e7ebe2" stop-opacity=".72"></stop><stop offset="1" stop-color="#d5ded1" stop-opacity=".18"></stop></lineargradient></defs><g opacity=".65"><line x1="20" y1="154" x2="160" y2="84" class="gridline"></line><line x1="20" y1="154" x2="160" y2="224" class="gridline"></line><line x1="38" y1="163" x2="178" y2="93" class="gridline"></line><line x1="38" y1="145" x2="178" y2="215" class="gridline"></line><line x1="56" y1="172" x2="196" y2="102" class="gridline"></line><line x1="56" y1="136" x2="196" y2="206" class="gridline"></line><line x1="74" y1="181" x2="214" y2="111" class="gridline"></line><line x1="74" y1="127" x2="214" y2="197" class="gridline"></line><line x1="92" y1="190" x2="232" y2="120" class="gridline"></line><line x1="92" y1="118" x2="232" y2="188" class="gridline"></line><line x1="110" y1="199" x2="250" y2="129" class="gridline"></line><line x1="110" y1="109" x2="250" y2="179" class="gridline"></line><line x1="128" y1="208" x2="268" y2="138" class="gridline"></line><line x1="128" y1="100" x2="268" y2="170" class="gridline"></line><line x1="146" y1="217" x2="286" y2="147" class="gridline"></line><line x1="146" y1="91" x2="286" y2="161" class="gridline"></line><line x1="164" y1="226" x2="304" y2="156" class="gridline"></line><line x1="164" y1="82" x2="304" y2="152" class="gridline"></line></g><polygon points="160,69.0 185,81.5 160,94.0 135,81.5" fill="#d8e1d1" stroke="#faf9f5" stroke-width="1.2"></polygon><polygon points="185,81.5 210,94.0 185,106.5 160,94.0" fill="#e8ede3" stroke="#faf9f5" stroke-width="1.2"></polygon><polygon points="210,94.0 235,106.5 210,119.0 185,106.5" fill="#d8e1d1" stroke="#faf9f5" stroke-width="1.2"></polygon><polygon points="235,106.5 260,119.0 235,131.5 210,119.0" fill="#e8ede3" stroke="#faf9f5" stroke-width="1.2"></polygon><polygon points="135,81.5 160,94.0 135,106.5 110,94.0" fill="#e8ede3" stroke="#faf9f5" stroke-width="1.2"></polygon><polygon points="160,94.0 185,106.5 160,119.0 135,106.5" fill="#79a18b" stroke="#faf9f5" stroke-width="1.2"></polygon><polygon points="185,106.5 210,119.0 185,131.5 160,119.0" fill="#79a18b" stroke="#faf9f5" stroke-width="1.2"></polygon><polygon points="210,119.0 235,131.5 210,144.0 185,131.5" fill="#d8e1d1" stroke="#faf9f5" stroke-width="1.2"></polygon><polygon points="110,94.0 135,106.5 110,119.0 85,106.5" fill="#d8e1d1" stroke="#faf9f5" stroke-width="1.2"></polygon><polygon points="135,106.5 160,119.0 135,131.5 110,119.0" fill="#79a18b" stroke="#faf9f5" stroke-width="1.2"></polygon><polygon points="160,119.0 185,131.5 160,144.0 135,131.5" fill="#79a18b" stroke="#faf9f5" stroke-width="1.2"></polygon><polygon points="185,131.5 210,144.0 185,156.5 160,144.0" fill="#e8ede3" stroke="#faf9f5" stroke-width="1.2"></polygon><polygon points="85,106.5 110,119.0 85,131.5 60,119.0" fill="#e8ede3" stroke="#faf9f5" stroke-width="1.2"></polygon><polygon points="110,119.0 135,131.5 110,144.0 85,131.5" fill="#d8e1d1" stroke="#faf9f5" stroke-width="1.2"></polygon><polygon points="135,131.5 160,144.0 135,156.5 110,144.0" fill="#e8ede3" stroke="#faf9f5" stroke-width="1.2"></polygon><polygon points="160,144.0 185,156.5 160,169.0 135,156.5" fill="#d8e1d1" stroke="#faf9f5" stroke-width="1.2"></polygon><polygon points="60,119.0 160,169.0 160,199.0 60,149.0" fill="#c7d3bf" opacity=".6"></polygon><polygon points="260,119.0 160,169.0 160,199.0 260,149.0" fill="#dde5d6" opacity=".6"></polygon><polygon points="160,76.0 210,101.0 160,126.0 110,101.0" fill="none" stroke="#34785e" stroke-width="1.5" stroke-dasharray="4 3"></polygon><line x1="160" y1="94.0" x2="160" y2="76.0" class="guide"></line><line x1="210" y1="119.0" x2="210" y2="101.0" class="guide"></line><line x1="160" y1="144.0" x2="160" y2="126.0" class="guide"></line><line x1="110" y1="119.0" x2="110" y2="101.0" class="guide"></line><line x1="50" y1="129" x2="150" y2="179" class="dimension"></line><line x1="173" y1="178" x2="273" y2="128" class="dimension"></line></svg><p class="sample-description">用分块与边界表达计算覆盖及局部作用域。</p></div><div class="visual-sample"><div class="sample-heading"><span class="sample-number">03</span><h4>检查关系</h4></div><p class="sample-method">依赖 · 映射 · 层级 · 对齐</p><svg viewbox="0 25 320 225" role="img" aria-labelledby="visual-title-3"><title id="visual-title-3">检查关系：以连线与层级呈现对象之间的依赖和对应。</title><defs><lineargradient id="glass-3" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e7ebe2" stop-opacity=".72"></stop><stop offset="1" stop-color="#d5ded1" stop-opacity=".18"></stop></lineargradient></defs><g opacity=".65"><line x1="20" y1="154" x2="160" y2="84" class="gridline"></line><line x1="20" y1="154" x2="160" y2="224" class="gridline"></line><line x1="38" y1="163" x2="178" y2="93" class="gridline"></line><line x1="38" y1="145" x2="178" y2="215" class="gridline"></line><line x1="56" y1="172" x2="196" y2="102" class="gridline"></line><line x1="56" y1="136" x2="196" y2="206" class="gridline"></line><line x1="74" y1="181" x2="214" y2="111" class="gridline"></line><line x1="74" y1="127" x2="214" y2="197" class="gridline"></line><line x1="92" y1="190" x2="232" y2="120" class="gridline"></line><line x1="92" y1="118" x2="232" y2="188" class="gridline"></line><line x1="110" y1="199" x2="250" y2="129" class="gridline"></line><line x1="110" y1="109" x2="250" y2="179" class="gridline"></line><line x1="128" y1="208" x2="268" y2="138" class="gridline"></line><line x1="128" y1="100" x2="268" y2="170" class="gridline"></line><line x1="146" y1="217" x2="286" y2="147" class="gridline"></line><line x1="146" y1="91" x2="286" y2="161" class="gridline"></line><line x1="164" y1="226" x2="304" y2="156" class="gridline"></line><line x1="164" y1="82" x2="304" y2="152" class="gridline"></line></g><line x1="62" y1="104" x2="140" y2="125" class="signal"></line><line x1="246" y1="104" x2="184" y2="125" class="signal"></line><line x1="164" y1="152" x2="164" y2="187" class="signal"></line><line x1="72" y1="179" x2="139" y2="203" class="signal"></line><g opacity="1" class="solid"><polygon points="40,77.0 60,87 60,113 40,103.0" fill="#b8c7b8"></polygon><polygon points="60,87 80,77.0 80,103.0 60,113" fill="#ccd6c6"></polygon><polygon points="60,67 80,77.0 60,87 40,77.0" fill="#e2e8dd"></polygon></g><g opacity="1" class="solid"><polygon points="230,77.0 250,87 250,113 230,103.0" fill="#b8c7b8"></polygon><polygon points="250,87 270,77.0 270,103.0 250,113" fill="#ccd6c6"></polygon><polygon points="250,67 270,77.0 250,87 230,77.0" fill="#e2e8dd"></polygon></g><g opacity="1" class="solid"><polygon points="134,117.5 161,131 161,164 134,150.5" fill="#245d4e"></polygon><polygon points="161,131 188,117.5 188,150.5 161,164" fill="#548776"></polygon><polygon points="161,104 188,117.5 161,131 134,117.5" fill="#a0c1ae"></polygon></g><g opacity="1" class="solid"><polygon points="43,159.0 59,167 59,188 43,180.0" fill="#b8c7b8"></polygon><polygon points="59,167 75,159.0 75,180.0 59,188" fill="#ccd6c6"></polygon><polygon points="59,151 75,159.0 59,167 43,159.0" fill="#e2e8dd"></polygon></g><g opacity="1" class="solid"><polygon points="142,193.0 164,204 164,230 142,219.0" fill="#b8c7b8"></polygon><polygon points="164,204 186,193.0 186,219.0 164,230" fill="#ccd6c6"></polygon><polygon points="164,182 186,193.0 164,204 142,193.0" fill="#e2e8dd"></polygon></g></svg><p class="sample-description">以连线与层级呈现对象之间的依赖和对应。</p></div><div class="visual-sample"><div class="sample-heading"><span class="sample-number">04</span><h4>定位重点</h4></div><p class="sample-method">排序 · 色阶 · 峰值 · 离群点</p><svg viewbox="0 25 320 225" role="img" aria-labelledby="visual-title-4"><title id="visual-title-4">定位重点：让局部峰值从整体指标分布中显现。</title><defs><lineargradient id="glass-4" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e7ebe2" stop-opacity=".72"></stop><stop offset="1" stop-color="#d5ded1" stop-opacity=".18"></stop></lineargradient></defs><g opacity=".65"><line x1="20" y1="154" x2="160" y2="84" class="gridline"></line><line x1="20" y1="154" x2="160" y2="224" class="gridline"></line><line x1="38" y1="163" x2="178" y2="93" class="gridline"></line><line x1="38" y1="145" x2="178" y2="215" class="gridline"></line><line x1="56" y1="172" x2="196" y2="102" class="gridline"></line><line x1="56" y1="136" x2="196" y2="206" class="gridline"></line><line x1="74" y1="181" x2="214" y2="111" class="gridline"></line><line x1="74" y1="127" x2="214" y2="197" class="gridline"></line><line x1="92" y1="190" x2="232" y2="120" class="gridline"></line><line x1="92" y1="118" x2="232" y2="188" class="gridline"></line><line x1="110" y1="199" x2="250" y2="129" class="gridline"></line><line x1="110" y1="109" x2="250" y2="179" class="gridline"></line><line x1="128" y1="208" x2="268" y2="138" class="gridline"></line><line x1="128" y1="100" x2="268" y2="170" class="gridline"></line><line x1="146" y1="217" x2="286" y2="147" class="gridline"></line><line x1="146" y1="91" x2="286" y2="161" class="gridline"></line><line x1="164" y1="226" x2="304" y2="156" class="gridline"></line><line x1="164" y1="82" x2="304" y2="152" class="gridline"></line></g><g opacity="1" class="solid"><polygon points="51,121.5 66,129 66,160 51,152.5" fill="#b8c7b8"></polygon><polygon points="66,129 81,121.5 81,152.5 66,160" fill="#ccd6c6"></polygon><polygon points="66,114 81,121.5 66,129 51,121.5" fill="#e2e8dd"></polygon></g><g opacity="1" class="solid"><polygon points="93,111.5 108,119 108,167 93,159.5" fill="#b8c7b8"></polygon><polygon points="108,119 123,111.5 123,159.5 108,167" fill="#ccd6c6"></polygon><polygon points="108,104 123,111.5 108,119 93,111.5" fill="#e2e8dd"></polygon></g><g opacity="1" class="solid"><polygon points="135,128.5 150,136 150,174 135,166.5" fill="#b8c7b8"></polygon><polygon points="150,136 165,128.5 165,166.5 150,174" fill="#ccd6c6"></polygon><polygon points="150,121 165,128.5 150,136 135,128.5" fill="#e2e8dd"></polygon></g><g opacity="1" class="solid"><polygon points="177,69.5 192,77 192,181 177,173.5" fill="#245d4e"></polygon><polygon points="192,77 207,69.5 207,173.5 192,181" fill="#548776"></polygon><polygon points="192,62 207,69.5 192,77 177,69.5" fill="#a0c1ae"></polygon></g><line x1="192" y1="47" x2="192" y2="199" class="guide"></line><line x1="169" y1="67" x2="215" y2="67" class="dimension"></line><g opacity="1" class="solid"><polygon points="219,153.5 234,161 234,188 219,180.5" fill="#b8c7b8"></polygon><polygon points="234,161 249,153.5 249,180.5 234,188" fill="#ccd6c6"></polygon><polygon points="234,146 249,153.5 234,161 219,153.5" fill="#e2e8dd"></polygon></g><line x1="33" y1="186" x2="33" y2="68" class="axis"></line></svg><p class="sample-description">让局部峰值从整体指标分布中显现。</p></div><div class="visual-sample"><div class="sample-heading"><span class="sample-number">05</span><h4>候选比较</h4></div><p class="sample-method">并排 · 共同基线 · 对应项对齐</p><svg viewbox="0 25 320 225" role="img" aria-labelledby="visual-title-5"><title id="visual-title-5">候选比较：将候选并列对齐，让关键差异直接可见。</title><defs><lineargradient id="glass-5" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e7ebe2" stop-opacity=".72"></stop><stop offset="1" stop-color="#d5ded1" stop-opacity=".18"></stop></lineargradient></defs><g opacity=".65"><line x1="20" y1="154" x2="160" y2="84" class="gridline"></line><line x1="20" y1="154" x2="160" y2="224" class="gridline"></line><line x1="38" y1="163" x2="178" y2="93" class="gridline"></line><line x1="38" y1="145" x2="178" y2="215" class="gridline"></line><line x1="56" y1="172" x2="196" y2="102" class="gridline"></line><line x1="56" y1="136" x2="196" y2="206" class="gridline"></line><line x1="74" y1="181" x2="214" y2="111" class="gridline"></line><line x1="74" y1="127" x2="214" y2="197" class="gridline"></line><line x1="92" y1="190" x2="232" y2="120" class="gridline"></line><line x1="92" y1="118" x2="232" y2="188" class="gridline"></line><line x1="110" y1="199" x2="250" y2="129" class="gridline"></line><line x1="110" y1="109" x2="250" y2="179" class="gridline"></line><line x1="128" y1="208" x2="268" y2="138" class="gridline"></line><line x1="128" y1="100" x2="268" y2="170" class="gridline"></line><line x1="146" y1="217" x2="286" y2="147" class="gridline"></line><line x1="146" y1="91" x2="286" y2="161" class="gridline"></line><line x1="164" y1="226" x2="304" y2="156" class="gridline"></line><line x1="164" y1="82" x2="304" y2="152" class="gridline"></line></g><polygon points="55,80 97,55 97,183 55,208" fill="url(#glass-5)" stroke="#c1cec0" stroke-width="1"></polygon><line x1="57" y1="106" x2="92" y2="90" class="guide"></line><circle cx="73" cy="98.26" r="4.7" fill="#a9b7a4"></circle><line x1="57" y1="140" x2="92" y2="124" class="guide"></line><circle cx="83" cy="127.96000000000001" r="4.7" fill="#a9b7a4"></circle><line x1="57" y1="174" x2="92" y2="158" class="guide"></line><circle cx="67" cy="168.84" r="4.7" fill="#a9b7a4"></circle><polygon points="139,80 181,55 181,183 139,208" fill="url(#glass-5)" stroke="#c1cec0" stroke-width="1"></polygon><line x1="141" y1="106" x2="176" y2="90" class="guide"></line><circle cx="168" cy="93.53" r="4.7" fill="#2b755b"></circle><line x1="141" y1="140" x2="176" y2="124" class="guide"></line><circle cx="156" cy="132.69" r="4.7" fill="#2b755b"></circle><line x1="141" y1="174" x2="176" y2="158" class="guide"></line><circle cx="164" cy="163.25" r="4.7" fill="#2b755b"></circle><polygon points="223,80 265,55 265,183 223,208" fill="url(#glass-5)" stroke="#c1cec0" stroke-width="1"></polygon><line x1="225" y1="106" x2="260" y2="90" class="guide"></line><circle cx="235" cy="100.84" r="4.7" fill="#a9b7a4"></circle><line x1="225" y1="140" x2="260" y2="124" class="guide"></line><circle cx="255" cy="126.24" r="4.7" fill="#a9b7a4"></circle><line x1="225" y1="174" x2="260" y2="158" class="guide"></line><circle cx="242" cy="165.83" r="4.7" fill="#a9b7a4"></circle></svg><p class="sample-description">将候选并列对齐，让关键差异直接可见。</p></div><div class="visual-sample"><div class="sample-heading"><span class="sample-number">06</span><h4>过程追踪</h4></div><p class="sample-method">时间轴 · 阶段 · 轨迹 · 事件</p><svg viewbox="0 25 320 225" role="img" aria-labelledby="visual-title-6"><title id="visual-title-6">过程追踪：沿时间与阶段观察状态变化，定位关键转折。</title><defs><lineargradient id="glass-6" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e7ebe2" stop-opacity=".72"></stop><stop offset="1" stop-color="#d5ded1" stop-opacity=".18"></stop></lineargradient></defs><g opacity=".65"><line x1="20" y1="154" x2="160" y2="84" class="gridline"></line><line x1="20" y1="154" x2="160" y2="224" class="gridline"></line><line x1="38" y1="163" x2="178" y2="93" class="gridline"></line><line x1="38" y1="145" x2="178" y2="215" class="gridline"></line><line x1="56" y1="172" x2="196" y2="102" class="gridline"></line><line x1="56" y1="136" x2="196" y2="206" class="gridline"></line><line x1="74" y1="181" x2="214" y2="111" class="gridline"></line><line x1="74" y1="127" x2="214" y2="197" class="gridline"></line><line x1="92" y1="190" x2="232" y2="120" class="gridline"></line><line x1="92" y1="118" x2="232" y2="188" class="gridline"></line><line x1="110" y1="199" x2="250" y2="129" class="gridline"></line><line x1="110" y1="109" x2="250" y2="179" class="gridline"></line><line x1="128" y1="208" x2="268" y2="138" class="gridline"></line><line x1="128" y1="100" x2="268" y2="170" class="gridline"></line><line x1="146" y1="217" x2="286" y2="147" class="gridline"></line><line x1="146" y1="91" x2="286" y2="161" class="gridline"></line><line x1="164" y1="226" x2="304" y2="156" class="gridline"></line><line x1="164" y1="82" x2="304" y2="152" class="gridline"></line></g><polygon points="51,100 75,75 75,169 51,194" fill="url(#glass-6)" stroke="#c1cec0" stroke-width="1"></polygon><polygon points="118,100 142,75 142,169 118,194" fill="url(#glass-6)" stroke="#c1cec0" stroke-width="1"></polygon><polygon points="185,100 209,75 209,169 185,194" fill="url(#glass-6)" stroke="#c1cec0" stroke-width="1"></polygon><polygon points="252,100 276,75 276,169 252,194" fill="url(#glass-6)" stroke="#c1cec0" stroke-width="1"></polygon><path d="M28 127 C42 116 50 120 61 122 S100 163 128 153 S169 88 195 116 S240 166 264 135 S281 113 290 108" class="trajectory"></path><circle cx="61" cy="122" r="6" fill="#34785e" stroke="#faf9f5" stroke-width="2"></circle><circle cx="128" cy="153" r="6" fill="#34785e" stroke="#faf9f5" stroke-width="2"></circle><circle cx="195" cy="116" r="6" fill="#34785e" stroke="#faf9f5" stroke-width="2"></circle><circle cx="264" cy="135" r="6" fill="#34785e" stroke="#faf9f5" stroke-width="2"></circle><line x1="35" y1="235" x2="286" y2="235" class="axis"></line></svg><p class="sample-description">沿时间与阶段观察状态变化，定位关键转折。</p></div><div class="visual-sample"><div class="sample-heading"><span class="sample-number">07</span><h4>归因解释</h4></div><p class="sample-method">解释分支 · 证据配对 · 支持与反证</p><svg viewbox="0 25 320 225" role="img" aria-labelledby="visual-title-7"><title id="visual-title-7">归因解释：将证据与竞争假设并置，区分支持线索和待验证解释。</title><defs><lineargradient id="glass-7" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e7ebe2" stop-opacity=".72"></stop><stop offset="1" stop-color="#d5ded1" stop-opacity=".18"></stop></lineargradient></defs><g opacity=".65"><line x1="20" y1="154" x2="160" y2="84" class="gridline"></line><line x1="20" y1="154" x2="160" y2="224" class="gridline"></line><line x1="38" y1="163" x2="178" y2="93" class="gridline"></line><line x1="38" y1="145" x2="178" y2="215" class="gridline"></line><line x1="56" y1="172" x2="196" y2="102" class="gridline"></line><line x1="56" y1="136" x2="196" y2="206" class="gridline"></line><line x1="74" y1="181" x2="214" y2="111" class="gridline"></line><line x1="74" y1="127" x2="214" y2="197" class="gridline"></line><line x1="92" y1="190" x2="232" y2="120" class="gridline"></line><line x1="92" y1="118" x2="232" y2="188" class="gridline"></line><line x1="110" y1="199" x2="250" y2="129" class="gridline"></line><line x1="110" y1="109" x2="250" y2="179" class="gridline"></line><line x1="128" y1="208" x2="268" y2="138" class="gridline"></line><line x1="128" y1="100" x2="268" y2="170" class="gridline"></line><line x1="146" y1="217" x2="286" y2="147" class="gridline"></line><line x1="146" y1="91" x2="286" y2="161" class="gridline"></line><line x1="164" y1="226" x2="304" y2="156" class="gridline"></line><line x1="164" y1="82" x2="304" y2="152" class="gridline"></line></g><g opacity="1" class="solid"><polygon points="41,72.0 57,80 57,100 41,92.0" fill="#b8c7b8"></polygon><polygon points="57,80 73,72.0 73,92.0 57,100" fill="#ccd6c6"></polygon><polygon points="57,64 73,72.0 57,80 41,72.0" fill="#e2e8dd"></polygon></g><g opacity="1" class="solid"><polygon points="41,122.0 57,130 57,150 41,142.0" fill="#b8c7b8"></polygon><polygon points="57,130 73,122.0 73,142.0 57,150" fill="#ccd6c6"></polygon><polygon points="57,114 73,122.0 57,130 41,122.0" fill="#e2e8dd"></polygon></g><g opacity="1" class="solid"><polygon points="41,172.0 57,180 57,200 41,192.0" fill="#b8c7b8"></polygon><polygon points="57,180 73,172.0 73,192.0 57,200" fill="#ccd6c6"></polygon><polygon points="57,164 73,172.0 57,180 41,172.0" fill="#e2e8dd"></polygon></g><path d="M74 88 C119 88 128 112 169 112 M74 138 C111 138 130 112 169 112" class="signal"></path><path d="M74 188 C122 188 132 170 170 170 M74 138 C120 138 130 170 170 170" class="counter"></path><g opacity="1" class="solid"><polygon points="169,94.0 191,105 191,129 169,118.0" fill="#245d4e"></polygon><polygon points="191,105 213,94.0 213,118.0 191,129" fill="#548776"></polygon><polygon points="191,83 213,94.0 191,105 169,94.0" fill="#a0c1ae"></polygon></g><g opacity="1" class="solid"><polygon points="169,161.0 191,172 191,196 169,185.0" fill="#b8c7b8"></polygon><polygon points="191,172 213,161.0 213,185.0 191,196" fill="#ccd6c6"></polygon><polygon points="191,150 213,161.0 191,172 169,161.0" fill="#e2e8dd"></polygon></g><line x1="217" y1="111" x2="270" y2="111" class="signal"></line></svg><p class="sample-description">将证据与竞争假设并置，区分支持线索和待验证解释。</p></div></div><div class="atlas-footnote"><span>STRUCTURE → RELATION → UNDERSTANDING</span><span>分类可组合 · 交互独立配置</span></div></figure>
+<div class="table-scroll" tabindex="0" role="region" aria-label="6. 可视化设计分类、组合与删减标准：可横向滚动的表格"><table>
+<thead>
+<tr>
+<th scope="col">设计分类</th>
+<th scope="col">可以联想到的视觉组织方式</th>
+<th scope="col">典型表达与设计重点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>对象概览类</strong></td>
+<td>卡片、分区、关键值、标签、摘要</td>
+<td>用算子规格卡等表达对象是什么、关键约束及支持边界，形成可快速扫读的整体</td>
+</tr>
+<tr>
+<td><strong>表达范围类</strong></td>
+<td>边界框、分区、包围、覆盖、嵌套、共享区域</td>
+<td>用 Tile 网格、分块矩阵、内存层级图等明确数据覆盖、计算分块、资源共享或作用边界</td>
+</tr>
+<tr>
+<td><strong>检查关系类</strong></td>
+<td>连线、邻接、层级、映射、对齐、关联高亮</td>
+<td>用血缘、层级与映射表达来源、依赖、归属、对应和搬运关系</td>
+</tr>
+<tr>
+<td><strong>定位重点类</strong></td>
+<td>排序、色阶、峰谷、离群点、局部放大</td>
+<td>用 Top-K 表、误差分布图、瓶颈热力图突出值得关注的对象、区域和异常模式</td>
+</tr>
+<tr>
+<td><strong>候选比较类</strong></td>
+<td>并排、叠加、共同基线、差值、对应项对齐</td>
+<td>将方案、版本或参数候选置于可比条件下，让差异与取舍直接可见</td>
+</tr>
+<tr>
+<td><strong>过程追踪类</strong></td>
+<td>时间轴、泳道、阶段、轨迹、事件标记</td>
+<td>呈现运行或开发过程中的先后、持续、重叠、等待与转折</td>
+</tr>
+<tr>
+<td><strong>归因解释类</strong></td>
+<td>结论与证据配对、解释分支、支持与反证并置</td>
+<td>用瓶颈归因卡等组织现象、可能原因、证据和验证状态，形成可检查的解释结构</td>
+</tr>
+</tbody></table></div>
+<p>这些类别不要求互斥。同一载体可以组合多类设计方式；分类依据是当前表达如何组织，而不是图表名称。“候选比较类”没有专属图形，卡片、表格、泳道和矩阵都可以采用这种组织方式。</p>
+<h3>6.3 十一种可视化的分类映射</h3>
+<div class="table-scroll" tabindex="0" role="region" aria-label="6. 可视化设计分类、组合与删减标准：可横向滚动的表格"><table>
+<thead>
+<tr>
+<th scope="col">可视化形式</th>
+<th scope="col">基础设计分类</th>
+<th scope="col">可叠加的设计分类与条件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>误差分布图</td>
+<td>定位重点类</td>
+<td>统一尺度叠加不同版本时属于候选比较；明确标出容差区间时也表达范围</td>
+</tr>
+<tr>
+<td>Top-K 表</td>
+<td>定位重点类</td>
+<td>若行代表备选方案，且提供一致评估维度与取舍信息，也属于候选比较；只有排名不能代表整体分布</td>
+</tr>
+<tr>
+<td>泳道片段</td>
+<td>过程追踪类</td>
+<td>加入依赖线时检查关系；标出调度、并行分组时表达范围；对齐两个版本时进行候选比较</td>
+</tr>
+<tr>
+<td>瓶颈归因卡</td>
+<td>归因解释类</td>
+<td>并置竞争解释及其证据时进行候选比较；若仅显示结论标签与关键值，则只承担对象概览</td>
+</tr>
+<tr>
+<td>算子规格卡</td>
+<td>对象概览类</td>
+<td>用分区或边界明确支持的输入、计算覆盖等范围时，也属于表达范围；可编辑或可发送给 Agent 属于交互配置</td>
+</tr>
+<tr>
+<td>Tile 网格</td>
+<td>表达范围类</td>
+<td>加入 Tile 与核心/任务的映射时检查关系；叠加耗时色阶时定位重点；并排划分策略时进行候选比较</td>
+</tr>
+<tr>
+<td>分块矩阵</td>
+<td>表达范围类</td>
+<td>加入块间计算、访问或维度对应时检查关系；并排分块方案时进行候选比较</td>
+</tr>
+<tr>
+<td>内存层级图</td>
+<td>检查关系类</td>
+<td>表达归属、层级与搬运路径；用嵌套区域表示共享或可访问边界时表达范围；叠加带宽、容量压力时定位重点</td>
+</tr>
+<tr>
+<td>瓶颈热力图</td>
+<td>定位重点类</td>
+<td>保持尺度与对象对应后比较版本时属于候选比较；只有热点颜色不能证明瓶颈原因</td>
+</tr>
+<tr>
+<td>算子血缘图</td>
+<td>检查关系类</td>
+<td>标明有依据的变更影响对象时表达范围；加入派生阶段或版本演进时进行过程追踪</td>
+</tr>
+<tr>
+<td>变更时间线</td>
+<td>过程追踪类</td>
+<td>关联改动与实验结果时检查关系；对齐多个版本的可比结果时进行候选比较</td>
+</tr>
+</tbody></table></div>
+<p>几组边界需要保留：</p>
+<ul>
+<li>Tile 网格与分块矩阵可能是同一种设计分类的不同载体。前者常强调 Tile 单元与任务映射，后者常强调数据维度和分块关系；以实际内容判断，不按名称强行分开。</li>
+<li>泳道片段呈现一次运行内部的执行过程；变更时间线呈现开发过程中的方案与实验演进。两者同属过程追踪，但时间语义不同。</li>
+<li>算子血缘图表达派生与来源，执行依赖图表达等待与并行条件。来源关系不能直接当作调度依赖。</li>
+<li>误差分布、泳道和热力图可以揭示模式；归因解释仍需区分观察、候选原因和已验证结论，不能把空间或时间相关性直接写成因果。</li>
+</ul>
+<h3>6.4 从分类到具体设计</h3>
+<p>推荐推导顺序：</p>
+<pre><code class="language-text">当前需要用户看清什么 → 选择设计分类 → 确定视觉组织方式 → 选择图表载体 → 配置交互
+</code></pre>
+<p>例如，比较两种分块方案：先选择候选比较类，再确定并排、对应位置对齐与共同评价尺度，随后使用两张分块矩阵，最后配置联动、圈选和 Agent 提问。不要先决定画矩阵，再寻找它能回答的问题。</p>
+<p>使用场景可组合多类设计：例外接管可能需要对象概览、过程追踪与归因解释；交付协作可能需要规格概览、关系检查与候选比较。向 Agent 提问可以配置在任何类别上，其上下文绑定遵循第 5 节的共同证据要求。</p>
+<h3>6.5 展示与删减标准</h3>
+<p>直接返回一个通过验证的结果时，可以零图表；简单比较用表格即可；需要关系推理时再使用泳道、依赖图或误差图。按需打开不等于每次生成一个风格全新的工作台，应保留稳定图形语义和对象身份。</p>
+<p>可视化触发规则是研究启发式：只有预期能降低遗漏、错误判断或沟通成本，并超过读图和打断成本时才展示。检验方法是与纯 Agent 摘要对照；如果加图没有改善判断和任务结果，就移除该图。</p>
+</section>
+<section id="chapter-7" class="chapter"><header class="chapter-heading"><span class="chapter-number">07</span><h2>候选体验策略与具体机会</h2></header><p>候选策略：<strong>让开发者以可验证的结果推进算子交付，并在需要时有效介入。</strong></p>
+<p>以下按体验原则组织，不构成正式设计 registry；作用机制与收益尚待验证。</p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="7. 候选体验策略与具体机会：可横向滚动的表格"><table>
+<thead>
+<tr>
+<th scope="col">方向与概括性收益</th>
+<th scope="col">具体问题</th>
+<th scope="col">设计选择</th>
+<th scope="col">作用机制</th>
+<th scope="col">可验证的具体收益</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>明确委托边界：减少任务返工</td>
+<td>自然语言遗漏 shape、设备、性能目标</td>
+<td>从工程提取约束，只询问缺失或冲突项</td>
+<td>把含混愿望转成可执行验收条件</td>
+<td>因目标遗漏而重开任务次数减少</td>
+</tr>
+<tr>
+<td>同上</td>
+<td>单个样例通过被误当全范围通过</td>
+<td>结果携带已验证与未验证范围</td>
+<td>在接受时暴露覆盖边界</td>
+<td>错误接受未覆盖输入的比例下降</td>
+</tr>
+<tr>
+<td>保持证据一致：降低核对成本</td>
+<td>人与 Agent 对时间、对象、版本理解不同</td>
+<td>跨摘要、图、代码保留同一对象与口径</td>
+<td>减少重新寻找与手工换算</td>
+<td>证据定位耗时和错配率下降</td>
+</tr>
+<tr>
+<td>同上</td>
+<td>性能建议从观察直接跳到根因</td>
+<td>分开表达事实、竞争解释和区分实验</td>
+<td>用户能检查建议凭据并推翻假设</td>
+<td>无证据试改和重复失败减少</td>
+</tr>
+<tr>
+<td>让介入发生在必要处：降低监督负担</td>
+<td>一直聊天或一直守着运行</td>
+<td>按约束变化、失败和预算节点请求介入</td>
+<td>日常步骤自动推进，关键选择及时暴露</td>
+<td>总监督时间下降且误接受不增加</td>
+</tr>
+<tr>
+<td>同上</td>
+<td>接管时只有长聊天历史</td>
+<td>交付可继续的检查点与失败摘要</td>
+<td>让用户从当前问题接续而不是重新诊断</td>
+<td>接管到下一次有效行动的时间缩短</td>
+</tr>
+<tr>
+<td>让个人经验进入团队：减少重复探索</td>
+<td>定制脚本只能原作者使用</td>
+<td>保存输入范围、计算口径、样例与回归条件</td>
+<td>方法连同边界一起复用</td>
+<td>跨人复现成功率提高</td>
+</tr>
+<tr>
+<td>同上</td>
+<td>用户改界面后语义悄然变化</td>
+<td>允许视图组合自由，保持指标和对象契约稳定</td>
+<td>定制不会破坏团队共同理解</td>
+<td>定制后回归失败与支持成本下降</td>
+</tr>
+</tbody></table></div>
+</section>
+<section id="chapter-8" class="chapter"><header class="chapter-heading"><span class="chapter-number">08</span><h2>三个用于验证机会的场景脚本</h2></header><p>均为构造场景，不是已有产品能力或实测案例。</p>
+<h3>A. 常规算子生成：让界面退出主流程</h3>
+<p>用户提交算子语义与目标环境 → Agent 提取支持范围和参考实现 → 在既定范围生成代码、构建、验证 → 返回可运行实现、验证范围和复现入口。全部通过时不弹出大图；约束冲突时才显示选择。</p>
+<p>检验：任务完成时间是否缩短，用户是否理解未覆盖范围；不能仅统计生成代码速度。</p>
+<h3>B. 精度难例：从通过率转向首次异常与适用边界</h3>
+<p>常规输入通过，特殊 shape 或输入分布失败 → Agent 最小化失败样本并比较中间结果 → 默认给出首次差异和候选解释 → 用户需要判断误差扩散或业务容差时，展开误差分布/层间对比 → 修复后跑独立回归。</p>
+<p>检验：错误接受率、定位时间与修复后回归表现。容差属于验收条件，不允许为了通过而静默放宽；golden 与实现必须避免共享同一错误假设。</p>
+<h3>C. 性能优化：用最小实验辨别原因</h3>
+<p>Agent 在运行中发现一段空闲 → 提出依赖等待和工作划分不均等竞争解释 → 获取区别这些解释的依赖、时间与统计证据 → 用户按需圈选范围、排除不符合业务条件的实验 → 在预算内试改并复测精度与性能 → 返回单算子结果和模型端到端影响。</p>
+<p>检验：确定有效优化所需实验次数、设备耗时、监督时间以及错误归因。图形帮助发现关系，不能把时间相关性直接写成因果。</p>
+</section>
+<section id="chapter-9" class="chapter"><header class="chapter-heading"><span class="chapter-number">09</span><h2>半年路线：2026-09 至 2027-03</h2></header><p>优先交付可验证的工作流切片，暂不建设覆盖所有场景的大平台。</p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="9. 半年路线：2026-09 至 2027-03：可横向滚动的表格"><table>
+<thead>
+<tr>
+<th scope="col">时间</th>
+<th scope="col">UX 具体工作</th>
+<th scope="col">可评审交付</th>
+<th scope="col">进入下一步的依据</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0–1 月</td>
+<td>观察真实任务，记录委托、返工、介入与交接</td>
+<td>建议招募 6–10 位跨角色参与者、采集 12–20 个任务；规模仅用于定性探索</td>
+<td>找到重复且高成本断点；不能外推人口比例</td>
+</tr>
+<tr>
+<td>1–3 月</td>
+<td>联合工程定义任务验收与证据一致性；试验结果优先输出</td>
+<td>可验收任务摘要、可追溯结果、必要介入和恢复原型</td>
+<td>在固定版本与工具能力下，与现有流程比较任务效果</td>
+</tr>
+<tr>
+<td>3–6 月</td>
+<td>跑通常规生成、精度异常、性能实验三类任务</td>
+<td>真实工作流试点、评测集、用户验证报告</td>
+<td>常规任务少干预；复杂任务降低错判与接管成本；无收益则删减交互</td>
+</tr>
+</tbody></table></div>
+<p>优先级：第一优先是验收边界、共享证据和结果回溯；第二优先是失败接管与候选比较；第三优先是动态可视化生成和大范围 Toolkit 自定制。优先级来自失败成本与可验证性判断，尚没有 ROI 实测。</p>
+<p>如果资源只能支持一个试点，选择“已有 Agent 性能分析与泳道结果对齐，并完成一次可比实验”。它有历史反馈、现有视图和已有设计基础；同时用一个常规代码生成任务检验“无需可视化”的边界，防止只研究最适合图的样本。</p>
+</section>
+<section id="chapter-10" class="chapter"><header class="chapter-heading"><span class="chapter-number">10</span><h2>一年路线：2027-03 至 2027-09</h2></header><p>在半年试点有收益后，将局部方案固化为跨任务能力：</p>
+<ul>
+<li><strong>可复用任务模板</strong>：描述目标、输入、范围、验收、预算、交付和失败出口；支持不同 Agent 宿主。</li>
+<li><strong>共同证据契约</strong>：让源码、测试、运行、指标与 UI/MCP 使用一致身份和定义。UX 定义人必须理解的语义，工程实现与校验。</li>
+<li><strong>可定制的工具基础</strong>：把布局、筛选、组合等个人偏好开放给用户；对指标语义、来源、兼容性和回归条件保持稳定约束。</li>
+<li><strong>真实任务评测与失败知识</strong>：记录什么用户在什么条件下成功或失败，把新模型、Skill、界面改动放到同一验证集比较。</li>
+</ul>
+<p>规划不是能力预测。若 Agent 提升更快，将更多资源投向验收、跨任务控制和方法复用；若 Agent 提升较慢，继续投入专家诊断与快速接管。共同投资是任务语义、可靠证据和评测，避免押注某一代模型的弱点。</p>
+</section>
+<section id="chapter-11" class="chapter"><header class="chapter-heading"><span class="chapter-number">11</span><h2>UX 护城河与团队职责</h2></header><div class="table-scroll" tabindex="0" role="region" aria-label="11. UX 护城河与团队职责：可横向滚动的表格"><table>
+<thead>
+<tr>
+<th scope="col">资产</th>
+<th scope="col">为什么可能积累优势</th>
+<th scope="col">防止自我安慰的要求</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>真实任务与失败案例库</td>
+<td>外部模型不知道本团队的目标冲突、失败代价、环境限制和协作断点</td>
+<td>持续接触用户，提供可复现案例并保持更新</td>
+</tr>
+<tr>
+<td>领域判断模型</td>
+<td>明确何时能信、何时补证据、何时做实验、何时停止</td>
+<td>与专家共同验证，落实到产品状态和验收条件</td>
+</tr>
+<tr>
+<td>人与 Agent 的协作语义</td>
+<td>把目标、对象、证据、动作与结果连接起来，可跨界面和宿主复用</td>
+<td>必须进入工程契约，不能只留在设计稿</td>
+</tr>
+<tr>
+<td>用户结果评测体系</td>
+<td>判断一次改动是否让任务更容易成功，包含监督与恢复成本</td>
+<td>评测真实任务，保留负面结果并影响优先级</td>
+</tr>
+</tbody></table></div>
+<p>这些是跨职能资产，UX 没有天然专属权。UX 要用研究、流程推导、原型和评估持续贡献，工程与领域专家共同建设。Prompt、Skill 数量、图表数量、某套视觉风格和“只有设计师会改界面”都难成为持久壁垒。</p>
+<p>职责建议：UX 主导任务研究、协作体验、信息语义与用户效果评估；领域专家主导数学/精度/性能有效性；工程主导运行时、数据计算、工具实现与可靠性；产品负责人协调业务目标和资源。不要把全部 Agent 基础设施改名为 UX 工作。</p>
+<p>设计师应补足：读代码与运行产物的能力、测试与指标常识、Skill/MCP 输入输出理解、可运行原型与评测能力。深度以能发现断点并与工程共同验证为准，不要求人人成为 kernel 专家。</p>
+</section>
+<section id="chapter-12" class="chapter"><header class="chapter-heading"><span class="chapter-number">12</span><h2>衡量方式与下一步验证</h2></header><p>核心指标：<strong>达到可交付结果所需的总时间，在明确的错误接受率约束下。</strong> 分开记录用户主动工作、监督检查、设备执行与等待时间，避免只优化某一项。</p>
+<p>配套指标：一次验收通过率、错误接受率、证据定位时间、接管恢复时间、无效实验与设备成本、跨人复现率、端到端模型收益。打开图次数、聊天轮数和 Agent 调用数仅作诊断变量，不能直接当成功指标。</p>
+<p>对比条件：传统工具流程、Agent 摘要流程、Agent 加按需证据交互。按用户熟练度和任务复杂度分层；对比时固定模型、工具版本、数据与验收规则，尽量交叉安排任务顺序。分别判断常规、难例与例外任务，不用总体平均数掩盖差异。</p>
+<p>待验证假设：</p>
+<ul>
+<li>结果优先能减少常规任务监督时间，且不增加未覆盖范围的错误接受。</li>
+<li>共享口径比增加解释性文案更能减少人与 Agent 的核对。</li>
+<li>精度难例也存在可视化价值，价值取决于关系复杂度而非“精度”标签。</li>
+<li>结构化失败交接比完整聊天历史更有助于接管。</li>
+<li>自定制 Toolkit 的长期成本集中在语义、兼容和维护，而不仅是首次生成。</li>
+</ul>
+<p>本研究没有为上述假设设定已证明的提升百分比；试点获得基线后再约定目标。</p>
+</section>
+<section id="chapter-13" class="chapter"><header class="chapter-heading"><span class="chapter-number">13</span><h2>来源</h2></header><ul>
+<li><span>本主题既有研究</span>与<span>证据映射</span>。</li>
+<li><a href="https://gitcode.com/cann/pypto/issues/1567">PyPTO issue #1567</a>：本轮依据本地 2026-07-20 原始快照读取；记录为已关闭。</li>
+<li><span>原始 issue CSV</span>。</li>
+<li><span>项目 Agent in the loop 内容地图</span>：已有方案、研究和 L2/L3 原型的分界，本轮没有重新执行原型。</li>
+<li>CANNBot 本地 workflow：<code>公开源码快照</code> 与 <code>ops/pypto-op-verify/SKILL.md</code>；来源登记 snapshot 为 <code>7f564bf1736cc97868101a20c712c077c0e789a2</code>，本轮只读未 refresh。</li>
+<li><a href="https://github.com/meta-pytorch/KernelAgent">KernelAgent 官方仓库</a>：End-to-End Kernel Optimization Workflows。</li>
+<li><a href="https://docs.nvidia.com/nsight-compute/NsightCompute/#nsight-copilot">NVIDIA Nsight Compute 官方指南</a>：profile 上下文、报告内提问与能力限制。</li>
+<li><a href="https://www.anthropic.com/engineering/writing-tools-for-agents">Anthropic：Writing effective tools for AI agents</a>：工具契约与真实任务评测方法。</li>
+</ul>
+</section></main></div><footer class="footer"><span>PyPTOUX · 研究与设计机会 / owner: Codex</span><a href="#report">返回报告开头 ↑</a></footer>
+<script>
+document.getElementById('print').addEventListener('click',()=>window.print());
+const links=[...document.querySelectorAll('.contents a')];const sections=[...document.querySelectorAll('.chapter')];
+function update(){let current=sections[0];for(const s of sections){if(s.getBoundingClientRect().top<innerHeight*.35)current=s;}for(const a of links){if(a.hash==='#'+current.id)a.setAttribute('aria-current','location');else a.removeAttribute('aria-current');}}
+let ticking=false;addEventListener('scroll',()=>{if(!ticking){requestAnimationFrame(()=>{update();ticking=false;});ticking=true;}},{passive:true});update();
+</script>
+<script src="../../_shared/entry-shell.js?v=825d3e9441695dc2" data-entry="agentic-operator-development" data-mode="bar" defer></script>
+</body></html>

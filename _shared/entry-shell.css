@@ -1,0 +1,99 @@
+/*
+  PTO Design Lab — 条目页薄外壳（原创）
+  owner: Claude（Batch D 私有草稿）。所有选择器以 .pdl-shell 为前缀，变量以 --pdl- 为前缀，
+  不覆盖 Demo / 报告自身样式。compact = 全屏 Demo 角标；bar = 阅读型报告顶部细条。
+*/
+.pdl-shell {
+  --pdl-bg: rgba(255, 255, 255, .94);
+  --pdl-ink: #161616;
+  --pdl-muted: #5f5f5a;
+  --pdl-line: #d9d9d2;
+  --pdl-hover: #efefeb;
+  --pdl-accent: #5b34e0;
+  --pdl-shadow: 0 4px 18px rgba(0, 0, 0, .14);
+  font: 13px/1.45 -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif;
+  color: var(--pdl-ink);
+  -webkit-font-smoothing: antialiased;
+  box-sizing: border-box;
+}
+.pdl-shell[data-pdl-theme="dark"] {
+  --pdl-bg: rgba(28, 28, 31, .94);
+  --pdl-ink: #ececea;
+  --pdl-muted: #a6a6a0;
+  --pdl-line: #3a3a40;
+  --pdl-hover: #2a2a2f;
+  --pdl-accent: #a891ff;
+  --pdl-shadow: 0 4px 18px rgba(0, 0, 0, .45);
+}
+.pdl-shell *, .pdl-shell *::before, .pdl-shell *::after { box-sizing: inherit; }
+.pdl-shell a, .pdl-shell button, .pdl-shell select { font: inherit; color: inherit; }
+.pdl-shell :focus-visible { outline: 2px solid var(--pdl-accent); outline-offset: 2px; }
+.pdl-shell__row { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.pdl-shell__link, .pdl-shell__btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 7px;
+  border: 0; background: none; text-decoration: none; cursor: pointer; white-space: nowrap;
+}
+.pdl-shell__link:hover, .pdl-shell__btn:hover { background: var(--pdl-hover); }
+.pdl-shell__home { font-weight: 650; }
+.pdl-shell__sep { color: var(--pdl-muted); }
+.pdl-shell__intent { color: var(--pdl-muted); }
+.pdl-shell__mark {
+  width: 18px; height: 18px; border-radius: 5px; flex: none; display: inline-block;
+  background: var(--pdl-accent);
+  -webkit-mask: none;
+  position: relative;
+}
+.pdl-shell__mark::before, .pdl-shell__mark::after {
+  content: ""; position: absolute; left: 4px; height: 3px; border-radius: 2px; background: #fff;
+}
+.pdl-shell__mark::before { top: 5px; width: 10px; }
+.pdl-shell__mark::after { top: 10px; width: 6px; opacity: .75; }
+.pdl-shell[data-pdl-theme="dark"] .pdl-shell__mark::before,
+.pdl-shell[data-pdl-theme="dark"] .pdl-shell__mark::after { background: #151515; }
+.pdl-shell__related { position: relative; }
+.pdl-shell__menu {
+  position: absolute; min-width: 240px; max-width: min(360px, calc(100vw - 32px)); padding: 6px;
+  background: var(--pdl-bg); border: 1px solid var(--pdl-line); border-radius: 10px; box-shadow: var(--pdl-shadow);
+  list-style: none; margin: 0; z-index: 1;
+}
+.pdl-shell__menu[hidden] { display: none; }
+.pdl-shell__menu a { display: block; padding: 6px 9px; border-radius: 6px; text-decoration: none; white-space: normal; }
+.pdl-shell__menu a:hover { background: var(--pdl-hover); }
+.pdl-shell__menu small { display: block; color: var(--pdl-muted); font-size: 11.5px; }
+.pdl-shell svg { width: 14px; height: 14px; flex: none; }
+
+/* 全屏 Demo：默认收成左下角角标 */
+.pdl-shell--compact {
+  position: fixed; left: 12px; bottom: 12px; z-index: 2147483000;
+  background: var(--pdl-bg); border: 1px solid var(--pdl-line); border-radius: 10px; box-shadow: var(--pdl-shadow);
+  padding: 3px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  max-width: calc(100vw - 24px);
+}
+.pdl-shell--compact .pdl-shell__menu { bottom: calc(100% + 8px); left: 0; }
+.pdl-shell--compact:not(.is-open) .pdl-shell__extra { display: none; }
+.pdl-shell--compact .pdl-shell__toggle { padding: 4px; }
+.pdl-shell--compact.is-open .pdl-shell__toggle svg { transform: rotate(180deg); }
+
+/* 阅读型报告：文档顶部细条，跟随文档流 */
+/* 报告页可能给裸 nav 写了样式（如 display:flex、margin、border），外壳是 <nav>，先挡住 */
+.pdl-shell--bar {
+  display: block; margin: 0; border-radius: 0; list-style: none; font: inherit;
+  position: sticky; top: 0; z-index: 2147483000; width: 100%;
+  background: var(--pdl-bg); border-bottom: 1px solid var(--pdl-line);
+  /* 满屏自适应：左右边距取同一个值，与右侧目录栏、返回顶部按钮对齐同一条边 */
+  padding: 6px var(--rd-edge, clamp(14px, 1.6vw, 26px));
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+}
+.pdl-shell--bar .pdl-shell__row { width: 100%; justify-content: space-between; flex-wrap: nowrap; gap: 12px; }
+.pdl-shell--bar .pdl-shell__group { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; min-width: 0; }
+/* 尾部一组（相关条目、GitHub）统一靠右 */
+.pdl-shell--bar .pdl-shell__group:last-child { margin-left: auto; justify-content: flex-end; flex: none; }
+.pdl-shell--bar .pdl-shell__group:first-child { overflow: hidden; }
+.pdl-shell--bar .pdl-shell__menu { top: calc(100% + 6px); right: 0; }
+.pdl-shell--bar .pdl-shell__toggle { display: none; }
+
+@media (max-width: 520px) {
+  .pdl-shell__intent, .pdl-shell__sep { display: none; }
+  .pdl-shell--compact { left: 8px; bottom: 8px; }
+}
+@media print { .pdl-shell { display: none !important; } }

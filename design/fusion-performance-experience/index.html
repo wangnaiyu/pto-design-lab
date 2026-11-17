@@ -1,0 +1,2169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PyPTO 性能调优设计研究报告</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #efeeea;
+      --paper: #fffdf7;
+      --paper-soft: #f7f4ec;
+      --ink: #171716;
+      --muted: #65645f;
+      --soft: #8a877e;
+      --line: #d8d5cd;
+      --line-strong: #bdb7aa;
+      --palette-lavender: #ded8ee;
+      --palette-yellow: #f4f384;
+      --palette-sage: #cddfc8;
+      --palette-cream: #fffdf7;
+      --palette-orange: #f4a32f;
+      --palette-pink: #f28fac;
+      --palette-clay: #a96135;
+      --palette-moss: #6f895f;
+      --before: #a96135;
+      --before-soft: #fff1df;
+      --before-card: #fffde5;
+      --before-card-strong: #d9d56f;
+      --after: #5d4e86;
+      --after-soft: #f2eefb;
+      --after-card: #f2eefb;
+      --after-card-strong: #b9addc;
+      --add: #171716;
+      --add-soft: #f4f384;
+      --change: #906012;
+      --change-soft: #fff4d8;
+      --remove: #9b2c2c;
+      --remove-soft: #fff0f0;
+      --keep: #65645f;
+      --keep-soft: #ede9dd;
+      --shadow: 0 18px 45px rgba(23, 23, 22, 0.07);
+      --radius: 24px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background:
+        linear-gradient(180deg, rgba(244, 243, 132, 0.22), transparent 330px),
+        var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      font-size: 15px;
+      line-height: 1.65;
+    }
+
+    a { color: inherit; }
+
+    code, .mono {
+      font-family: "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 0.9em;
+    }
+
+    .page {
+      width: min(1440px, calc(100vw - 40px));
+      margin: 0 auto;
+      padding: 44px 0 72px;
+    }
+
+    .hero,
+    .section {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--paper);
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 340px;
+      gap: 28px;
+      align-items: end;
+      padding: 34px;
+      border-bottom-right-radius: 0;
+      border-bottom-left-radius: 0;
+    }
+
+    .eyebrow,
+    .section-kicker {
+      display: inline-flex;
+      align-items: center;
+      width: max-content;
+      max-width: 100%;
+      min-height: 26px;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: var(--add-soft);
+      color: var(--add);
+      font-size: 12px;
+      font-weight: 880;
+      font-family: "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+      text-transform: uppercase;
+    }
+
+    .eyebrow,
+    .section-kicker {
+      color: var(--ink);
+      letter-spacing: 0;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+
+    h1 {
+      max-width: 920px;
+      margin-bottom: 16px;
+      font-size: 42px;
+      line-height: 1.16;
+      font-weight: 760;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin-bottom: 8px;
+      font-size: 24px;
+      line-height: 1.25;
+    }
+
+    h3 {
+      margin-bottom: 8px;
+      font-size: 16px;
+      line-height: 1.28;
+    }
+
+    .lead {
+      max-width: 920px;
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .meta {
+      display: grid;
+      gap: 10px;
+      padding: 18px;
+      border-radius: 12px;
+      background: var(--paper-soft);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .meta strong {
+      display: block;
+      color: var(--ink);
+      font-size: 14px;
+    }
+
+    .report-nav {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      gap: 10px;
+      margin-top: 0;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-top: 0;
+      border-radius: 0 0 var(--radius) var(--radius);
+      background: rgba(255, 253, 247, 0.95);
+      box-shadow: 0 10px 28px rgba(23, 23, 22, 0.07);
+      backdrop-filter: blur(10px);
+    }
+
+    .report-nav a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 0 14px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 760;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .report-nav a:hover,
+    .report-nav a:focus-visible {
+      border-color: var(--line-strong);
+      background: var(--paper-soft);
+      color: var(--ink);
+      outline: none;
+    }
+
+    .report-nav a.is-active {
+      border-color: #181818;
+      background: #181818;
+      color: #ffffff;
+    }
+
+    .tab-page {
+      display: none;
+    }
+
+    .tab-page.active {
+      display: block;
+    }
+
+    .research-group {
+      scroll-margin-top: 84px;
+    }
+
+    .section {
+      margin-top: 28px;
+      padding: 34px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: flex-start;
+      margin-bottom: 28px;
+    }
+
+    .section-head p {
+      max-width: 860px;
+      margin-bottom: 0;
+      color: var(--muted);
+    }
+
+    .badge,
+    .status {
+      display: inline-flex;
+      align-items: center;
+      width: max-content;
+      max-width: 100%;
+      border-radius: 999px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .badge {
+      min-height: 28px;
+      padding: 3px 10px;
+      border: 1px solid var(--line);
+      background: var(--paper-soft);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .badge.before { color: var(--before); background: var(--before-soft); border-color: #e8bd87; }
+    .badge.after { color: var(--after); background: var(--after-soft); border-color: #c6bce4; }
+    .badge.new { color: var(--add); background: var(--add-soft); border-color: #dfde70; }
+    .badge.change { color: var(--change); background: var(--change-soft); border-color: #e8d09b; }
+    .badge.remove { color: var(--remove); background: var(--remove-soft); border-color: #e7b2ac; }
+    .badge.keep { color: var(--keep); background: var(--keep-soft); border-color: var(--line); }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .summary-card,
+    .value-card,
+    .persona-card,
+    .persona-panel,
+    .profile-item,
+    .principle {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--paper-soft);
+    }
+
+    .summary-card {
+      min-height: 128px;
+      padding: 18px;
+    }
+
+    .summary-card p,
+    .value-card li,
+    .persona-card li,
+    .persona-panel p,
+    .principle p {
+      color: var(--muted);
+    }
+
+    .journey-wrap {
+      overflow-x: auto;
+      padding-bottom: 8px;
+    }
+
+    .journey {
+      min-width: 1180px;
+      display: grid;
+      grid-template-columns: 126px repeat(8, minmax(118px, 1fr));
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .journey code { overflow-wrap: anywhere; }
+
+    .axis-label {
+      position: sticky;
+      left: 0;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 120px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--paper-soft);
+      color: var(--muted);
+      font-weight: 760;
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+    }
+
+    .axis-label.before { color: var(--before); }
+    .axis-label.after { color: var(--after); }
+    .axis-label.neutral { color: var(--muted); }
+
+    .stage {
+      min-height: 218px;
+      padding: 14px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: var(--paper);
+    }
+
+    .stage.before {
+      border-color: var(--before-card-strong);
+      border-top: 5px solid var(--before-card-strong);
+      background: linear-gradient(180deg, var(--before-card) 0%, var(--paper) 58%);
+    }
+
+    .stage.after,
+    .stage.new-step {
+      border-color: var(--after-card-strong);
+      border-top: 5px solid var(--after-card-strong);
+      background: linear-gradient(180deg, var(--after-card) 0%, var(--paper) 58%);
+    }
+
+    .stage.new-step {
+      border-style: dashed;
+    }
+
+    .status {
+      min-height: 24px;
+      margin-bottom: 9px;
+      padding: 3px 8px;
+      font-size: 11px;
+      line-height: 1;
+    }
+
+    .status.add { background: var(--add-soft); color: var(--add); }
+    .status.change { background: var(--change-soft); color: var(--change); }
+    .status.remove { background: var(--remove-soft); color: var(--remove); }
+    .status.keep { background: var(--keep-soft); color: var(--keep); }
+
+    .field {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(23, 23, 22, 0.14);
+    }
+
+    .field:first-of-type {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .field-label {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 850;
+      text-transform: uppercase;
+    }
+
+    .field p {
+      margin: 0;
+      color: var(--ink);
+      font-size: 12.5px;
+      line-height: 1.45;
+    }
+
+    .pain-text,
+    .value-text {
+      display: block;
+      margin-top: 6px;
+      padding: 7px 8px;
+      border-left: 3px solid #f4a32f;
+      background: #fff1df;
+      color: #7a3b16;
+      font-size: 12px;
+      font-weight: 720;
+      line-height: 1.45;
+    }
+
+    .pain-text.key {
+      border-left-color: var(--before);
+      background: #ffe6c5;
+      color: #6d2e0c;
+      font-weight: 850;
+    }
+
+    .value-text {
+      border-left-color: var(--palette-moss);
+      background: #eef4e7;
+      color: #465f3d;
+    }
+
+    .emotion-row {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 126px repeat(8, minmax(118px, 1fr));
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .emotion-card {
+      grid-column: 2 / -1;
+      min-height: 190px;
+      padding: 16px 18px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: var(--paper-soft);
+    }
+
+    .emotion-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+      color: var(--ink);
+      font-weight: 760;
+      font-size: 13px;
+    }
+
+    .emotion-title span:last-child {
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .curve-label {
+      fill: var(--muted);
+      font: 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .map-note {
+      grid-column: 2 / -1;
+      margin: 0;
+      padding: 13px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: var(--paper-soft);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .principles {
+      display: grid;
+      grid-template-columns: 0.78fr 1.22fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .principle-quote {
+      padding: 20px;
+      border-radius: var(--radius);
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .principle-quote p {
+      margin: 0;
+      color: var(--paper);
+      font-size: 18px;
+      line-height: 1.55;
+      font-weight: 720;
+    }
+
+    .principle-quote span {
+      display: block;
+      margin-top: 16px;
+      color: var(--palette-yellow);
+      font-family: "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+    }
+
+    .principle-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .principle {
+      padding: 14px 16px;
+    }
+
+    .principle strong {
+      color: var(--add);
+    }
+
+    .value-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .value-card {
+      padding: 20px;
+    }
+
+    .value-card ul,
+    .persona-card ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .value-card li + li,
+    .persona-card li + li {
+      margin-top: 8px;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .persona-page {
+      --persona-bg: #efeeea;
+      --persona-ink: #171716;
+      --persona-muted: #65645f;
+      --persona-line: #d8d5cd;
+      --persona-lavender: #ded8ee;
+      --persona-yellow: #f4f384;
+      --persona-green: #cddfc8;
+      --persona-cream: #fffdf7;
+      --persona-orange: #f4a32f;
+      --persona-pink: #f28fac;
+      padding: 0;
+      border-color: var(--persona-line);
+      background: var(--persona-bg);
+      color: var(--persona-ink);
+      overflow: hidden;
+    }
+
+    .persona-shell {
+      padding: 34px;
+    }
+
+    .persona-page .section-head {
+      margin-bottom: 28px;
+    }
+
+    .persona-page .section-head p {
+      color: var(--persona-muted);
+    }
+
+    .persona-section-label {
+      margin: 0 0 24px;
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 820;
+    }
+
+    .journey-subhead {
+      margin-bottom: 18px;
+    }
+
+    .journey-label {
+      margin-top: 42px;
+    }
+
+    .scenario-label {
+      margin-top: 76px;
+    }
+
+    .diagnosis-process {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 28px;
+      margin-bottom: 76px;
+    }
+
+    .process-step {
+      position: relative;
+      min-height: 210px;
+      padding-right: 28px;
+    }
+
+    .process-step + .process-step {
+      padding-left: 36px;
+      border-left: 1px solid var(--persona-line);
+    }
+
+    .process-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 34px;
+      color: var(--persona-ink);
+      font-size: 13px;
+    }
+
+    .process-icon {
+      display: grid;
+      place-items: center;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--persona-lavender);
+      font-size: 24px;
+      font-weight: 800;
+    }
+
+    .process-step h3 {
+      margin-bottom: 14px;
+      font-size: 34px;
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .pill-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .persona-pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 0 16px;
+      border: 1px solid #1e1e1c;
+      border-radius: 999px;
+      color: var(--persona-ink);
+      background: transparent;
+      font-size: 13px;
+    }
+
+    .persona-board {
+      display: grid;
+      grid-template-columns: minmax(360px, 0.98fr) minmax(420px, 1fr);
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .persona-photo {
+      min-height: 530px;
+      border-radius: 32px;
+      overflow: hidden;
+      background: var(--persona-cream);
+    }
+
+    .persona-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      display: block;
+    }
+
+    .persona-profile-stack {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 18px;
+    }
+
+    .quote-band {
+      display: grid;
+      grid-template-columns: 58px 1fr;
+      align-items: center;
+      min-height: 74px;
+      border-radius: 999px;
+      background: var(--persona-yellow);
+      color: var(--persona-ink);
+      overflow: hidden;
+    }
+
+    .quote-mark {
+      display: grid;
+      place-items: center;
+      width: 58px;
+      height: 58px;
+      margin-left: 10px;
+      border-radius: 50%;
+      background: var(--persona-ink);
+      color: #ffffff;
+      font-size: 30px;
+      line-height: 1;
+      font-family: Georgia, serif;
+    }
+
+    .quote-band p {
+      margin: 0;
+      padding: 14px 24px 14px 12px;
+      font-size: 18px;
+      line-height: 1.35;
+      font-weight: 650;
+    }
+
+    .persona-id-card {
+      padding: 34px;
+      border-radius: 32px;
+      background: var(--persona-cream);
+      color: var(--persona-ink);
+    }
+
+    .persona-id-head {
+      display: flex;
+      gap: 18px;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+
+    .persona-mini {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      object-fit: cover;
+      object-position: center;
+      border: 3px solid var(--persona-lavender);
+    }
+
+    .persona-id-head h3 {
+      margin: 0 0 2px;
+      font-size: 22px;
+    }
+
+    .persona-id-head p,
+    .persona-id-card p {
+      margin-bottom: 0;
+      color: var(--persona-muted);
+    }
+
+    .persona-id-needs {
+      margin-top: 28px;
+      padding-top: 24px;
+      border-top: 1px solid var(--persona-line);
+    }
+
+    .persona-id-needs h4 {
+      margin: 0 0 14px;
+      color: var(--persona-ink);
+      font-size: 18px;
+      line-height: 1.25;
+    }
+
+    .persona-facts {
+      display: grid;
+      gap: 4px;
+      margin-bottom: 26px;
+      color: var(--persona-ink);
+      font-size: 15px;
+    }
+
+    .persona-facts span {
+      color: var(--persona-muted);
+    }
+
+    .persona-data-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.08fr;
+      gap: 18px;
+      margin-top: 18px;
+      align-items: stretch;
+    }
+
+    .persona-card {
+      min-height: 270px;
+      padding: 28px;
+      border: 0;
+      border-radius: 32px;
+      background: var(--persona-cream);
+      color: var(--persona-ink);
+    }
+
+    .persona-card h3 {
+      margin-bottom: 24px;
+      font-size: 22px;
+      line-height: 1.2;
+    }
+
+    .persona-card.lavender { background: var(--persona-lavender); }
+    .persona-card.yellow { background: var(--persona-yellow); }
+    .persona-card.green { background: var(--persona-green); }
+
+    .scenario-storyboard {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 0;
+    }
+
+    .story-frame {
+      min-height: 330px;
+      padding: 16px;
+      border: 1px solid var(--persona-line);
+      border-radius: 24px;
+      background: var(--persona-cream);
+      color: var(--persona-ink);
+    }
+
+    .story-frame h3 {
+      margin: 0 0 6px;
+      font-size: 16px;
+      line-height: 1.25;
+    }
+
+    .story-frame p {
+      margin-bottom: 12px;
+      color: var(--persona-muted);
+      font-size: 12.5px;
+      line-height: 1.45;
+    }
+
+    .wireframe {
+      display: grid;
+      gap: 8px;
+      min-height: 150px;
+      padding: 10px;
+      border: 1px solid #1e1e1c;
+      border-radius: 16px;
+      background:
+        linear-gradient(135deg, rgba(23, 23, 22, 0.025), rgba(23, 23, 22, 0.06)),
+        var(--paper);
+    }
+
+    .wire-topbar,
+    .wire-footer {
+      height: 12px;
+      border-radius: 999px;
+      background: var(--persona-lavender);
+    }
+
+    .wire-main {
+      display: grid;
+      grid-template-columns: 0.78fr 1.22fr;
+      gap: 8px;
+      min-height: 104px;
+    }
+
+    .wire-code,
+    .wire-swimlane,
+    .wire-graph,
+    .wire-panel {
+      position: relative;
+      min-height: 74px;
+      padding: 8px;
+      border: 1px solid var(--persona-line);
+      border-radius: 12px;
+      background: rgba(255, 253, 247, 0.84);
+      overflow: hidden;
+    }
+
+    .wire-code::before,
+    .wire-swimlane::before,
+    .wire-graph::before,
+    .wire-panel::before {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--persona-muted);
+      font-size: 10px;
+      font-weight: 820;
+      text-transform: uppercase;
+    }
+
+    .wire-code::before { content: "Code"; }
+    .wire-swimlane::before { content: "Swimlane"; }
+    .wire-graph::before { content: "Graph"; }
+    .wire-panel::before { content: "Diagnosis"; }
+
+    .wire-code-line {
+      height: 6px;
+      margin-bottom: 5px;
+      border-radius: 999px;
+      background: #1e1e1c;
+      opacity: 0.82;
+    }
+
+    .wire-code-line.short { width: 62%; }
+    .wire-code-line.focus { background: var(--persona-yellow); opacity: 1; }
+
+    .lane {
+      display: grid;
+      grid-template-columns: 18px 1fr;
+      gap: 6px;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+
+    .lane span {
+      color: var(--persona-muted);
+      font-size: 9px;
+      font-weight: 720;
+    }
+
+    .lane-bar {
+      height: 9px;
+      border-radius: 999px;
+      background: var(--persona-lavender);
+    }
+
+    .lane-bar.focus {
+      background: var(--persona-yellow);
+      box-shadow: 0 0 0 2px rgba(23, 23, 22, 0.82);
+    }
+
+    .lane-bar.wait {
+      background: repeating-linear-gradient(45deg, var(--persona-green) 0 6px, rgba(205, 223, 200, 0.35) 6px 12px);
+    }
+
+    .graph-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 52px;
+    }
+
+    .graph-node {
+      width: 24px;
+      height: 24px;
+      border: 2px solid #1e1e1c;
+      border-radius: 8px;
+      background: var(--persona-lavender);
+    }
+
+    .graph-node.focus { background: var(--persona-yellow); }
+    .graph-edge {
+      width: 24px;
+      border-top: 2px solid #1e1e1c;
+    }
+
+    .panel-metric {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid var(--persona-line);
+      color: var(--persona-muted);
+      font-size: 10px;
+    }
+
+    .panel-metric strong {
+      color: var(--persona-ink);
+    }
+
+    .attention {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      margin-top: 12px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: var(--persona-yellow);
+      color: var(--persona-ink);
+      font-size: 12px;
+      font-weight: 820;
+    }
+
+    .story-note {
+      margin-top: 10px;
+      color: var(--persona-muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .trait {
+      margin-bottom: 20px;
+    }
+
+    .trait-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      color: var(--persona-ink);
+      font-size: 13px;
+    }
+
+    .trait-track {
+      position: relative;
+      height: 14px;
+      border-radius: 999px;
+      background:
+        repeating-linear-gradient(45deg, rgba(23, 23, 22, 0.12) 0 7px, transparent 7px 14px),
+        rgba(255, 255, 255, 0.34);
+    }
+
+    .trait-track::before {
+      content: "";
+      position: absolute;
+      inset: 3px auto 3px 0;
+      width: var(--value);
+      border-radius: 999px;
+      background: var(--persona-yellow);
+    }
+
+    .trait-track::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: var(--value);
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--persona-ink);
+      transform: translate(-50%, -50%);
+    }
+
+    .arrow-list {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .arrow-list li {
+      position: relative;
+      padding-left: 30px;
+      color: var(--persona-ink);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .arrow-list li::before {
+      content: "->";
+      position: absolute;
+      left: 0;
+      font-weight: 900;
+    }
+
+    .donut-card {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+
+    .persona-donut {
+      position: relative;
+      width: min(240px, 100%);
+      aspect-ratio: 1;
+      margin: 0 auto;
+      border-radius: 50%;
+      background:
+        conic-gradient(
+          var(--persona-ink) 0 38%,
+          var(--persona-yellow) 38% 73%,
+          rgba(23, 23, 22, 0.14) 73% 100%
+        );
+    }
+
+    .persona-donut::after {
+      content: "";
+      position: absolute;
+      inset: 42px;
+      border-radius: 50%;
+      background: var(--persona-green);
+    }
+
+    .donut-tag {
+      position: absolute;
+      z-index: 1;
+      padding: 3px 8px;
+      border-radius: 7px;
+      background: var(--persona-cream);
+      color: var(--persona-ink);
+      font-size: 13px;
+      font-weight: 720;
+    }
+
+    .donut-tag.one { top: 28px; left: 28px; }
+    .donut-tag.two { top: 24px; right: 12px; }
+    .donut-tag.three { right: 26px; bottom: 34px; }
+
+    .donut-legend {
+      display: grid;
+      gap: 12px;
+      margin-top: 26px;
+      color: var(--persona-ink);
+      font-size: 14px;
+    }
+
+    .legend-dot {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      margin-right: 10px;
+      border-radius: 50%;
+      vertical-align: middle;
+      background: var(--dot);
+    }
+
+    .legend-dot.hatched {
+      background: repeating-linear-gradient(45deg, rgba(23, 23, 22, 0.16) 0 4px, transparent 4px 8px);
+    }
+
+    /* scenario tab 复用 persona 视觉 tokens，让"故事主线"里的线框图正常着色 */
+    #scenario-section {
+      --persona-bg: #efeeea;
+      --persona-ink: #171716;
+      --persona-muted: #65645f;
+      --persona-line: #d8d5cd;
+      --persona-lavender: #ded8ee;
+      --persona-yellow: #f4f384;
+      --persona-green: #cddfc8;
+      --persona-cream: #fffdf7;
+      --persona-orange: #f4a32f;
+      --persona-pink: #f28fac;
+    }
+
+    /* 用户画像 profile 轮播 */
+    .persona-carousel { display: grid; gap: 14px; }
+
+    .carousel-tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .carousel-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 38px;
+      padding: 0 15px;
+      border: 1px solid #1e1e1c;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--persona-ink);
+      font: inherit;
+      font-size: 13px;
+      font-weight: 720;
+      cursor: pointer;
+    }
+
+    .carousel-tab .idx {
+      display: grid;
+      place-items: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--persona-lavender);
+      font-size: 11px;
+    }
+
+    .carousel-tab.is-active { background: #181818; color: #ffffff; border-color: #181818; }
+    .carousel-tab.is-active .idx { background: var(--persona-yellow); color: #181818; }
+
+    /* 两张 slide 叠放在同一网格单元：容器高度恒为较高的一张，切换不跳动 */
+    .carousel-slide {
+      grid-area: 1 / 1;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 18px;
+      visibility: hidden;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s ease;
+    }
+    .carousel-slide.is-active { visibility: visible; opacity: 1; pointer-events: auto; }
+
+    .persona-pain {
+      margin-top: 24px;
+      padding-top: 22px;
+      border-top: 1px solid var(--persona-line);
+    }
+
+    .persona-pain h4 { margin: 0 0 14px; font-size: 18px; line-height: 1.25; }
+
+    .pain-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+
+    .pain-list li {
+      position: relative;
+      padding: 8px 12px 8px 34px;
+      border-radius: 10px;
+      background: #fff1df;
+      color: #6d2e0c;
+      font-size: 13px;
+      line-height: 1.45;
+      font-weight: 640;
+    }
+
+    .pain-list li::before {
+      content: "!";
+      position: absolute;
+      left: 12px;
+      top: 8px;
+      display: grid;
+      place-items: center;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--before, #a96135);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    /* 故事主线线框图增强 */
+    .wire-list { display: grid; gap: 4px; }
+
+    .wire-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      padding: 3px 6px;
+      border-radius: 7px;
+      background: rgba(255, 253, 247, 0.7);
+      font-size: 9px;
+      color: var(--persona-muted);
+    }
+
+    .wire-row.focus { background: var(--persona-yellow); color: var(--persona-ink); font-weight: 720; }
+    .wire-row strong { color: var(--persona-ink); font-size: 9px; }
+
+    .lane-bar.ref { background: transparent; border: 1px dashed #1e1e1c; }
+
+    .lane-ref { position: relative; }
+    .lane-ref::after {
+      content: "理论";
+      position: absolute;
+      top: -3px;
+      bottom: -3px;
+      left: 58%;
+      border-left: 2px dashed #1e1e1c;
+      padding-left: 3px;
+      font-size: 8px;
+      color: var(--persona-muted);
+    }
+
+    .wire-code-line.add { background: var(--persona-green); opacity: 1; }
+
+    .panel-metric.delta strong { color: #1f6b45; }
+    .panel-metric.up strong { color: #9a3412; }
+
+    .wire-jump {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 6px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: var(--persona-lavender);
+      font-size: 9px;
+      font-weight: 720;
+      color: var(--persona-ink);
+    }
+
+    .story-frame .field:first-of-type { border-top: 1px solid rgba(23, 23, 22, 0.14); padding-top: 10px; }
+
+    @media (max-width: 980px) {
+      .page { width: min(100vw - 24px, 760px); padding-top: 20px; }
+      .hero { grid-template-columns: 1fr; padding: 24px; }
+      h1 { font-size: 32px; }
+      .summary-grid { grid-template-columns: 1fr; }
+      .value-grid { grid-template-columns: 1fr; }
+      .principles { grid-template-columns: 1fr; }
+      .report-nav { overflow-x: auto; }
+      .persona-shell { padding: 22px; }
+      .diagnosis-process { grid-template-columns: 1fr; gap: 18px; margin-bottom: 36px; }
+      .process-step,
+      .process-step + .process-step { min-height: 0; padding: 0; border-left: 0; }
+      .process-top { margin-bottom: 16px; }
+      .process-step h3 { font-size: 28px; }
+      .persona-board { grid-template-columns: 1fr; }
+      .persona-photo { min-height: 420px; }
+      .scenario-storyboard { grid-template-columns: 1fr !important; margin-bottom: 0; }
+      .persona-data-grid { grid-template-columns: 1fr; }
+      .section { padding: 22px; }
+      .section-head { display: block; }
+      .section-head .badge { margin-top: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">PyPTO Toolkit / 性能调优 / Design Research</p>
+        <h1>PyPTO 性能调优设计研究：从性能异常到诊断闭环</h1>
+        <p class="lead">
+          本报告聚焦 PyPTO 高阶算子开发者的性能调优体验，证据来自两个来源：算子开发者的匿名研究归纳，以及 issue #2141 中 UB 压力、spill 与额外 GM/UB 搬运的诊断诉求。
+          报告沉淀用户画像、用户旅程与用户场景三部分结论：现有机制能让用户看到执行时间线，但问题集中发生在后续“观察、猜测、试错”的性能归因阶段。
+        </p>
+      </div>
+      <aside class="meta" aria-label="报告元信息">
+        <div><strong>报告状态</strong>体验设计方案 v0.2</div>
+        <div><strong>证据边界</strong>匿名问题归纳 + 旅程 / 画像设计推断</div>
+        <div><strong>设计目标</strong>把专家调优困境转成可诊断、可验证的产品能力</div>
+      </aside>
+    </header>
+
+    <nav class="report-nav" aria-label="报告内一级导航">
+      <a class="is-active" href="#persona-section" data-tab="persona-section">用户画像</a>
+      <a href="#journey-section" data-tab="journey-section">用户旅程</a>
+      <a href="#scenario-section" data-tab="scenario-section">用户场景</a>
+    </nav>
+
+    <div id="journey-section" class="research-group tab-page" aria-label="用户旅程">
+      <section class="section" aria-labelledby="journey-group-title">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">Research Area 02</p>
+            <h2 id="journey-group-title">用户旅程</h2>
+            <p>
+              用 Before/After 对照呈现用户从生成泳道图到定位性能根因的体验差异，并把情绪变化、痛点和设计价值绑定到具体阶段。
+              旅程以融合算子诊断场景为主线；末尾的双场景痛点对齐再把通用算子 profiling 场景映射到同一主线。
+            </p>
+          </div>
+          <span class="badge before">Before &amp; After</span>
+        </div>
+
+        <p class="persona-section-label">One-Line Insight / 一句话结论</p>
+        <div class="section-head journey-subhead">
+          <div>
+            <p>
+              当前旅程并不缺“产物生成”，缺的是从 <code>merged_swimlane.json</code> 到可操作调优动作之间的诊断桥梁。
+              目标旅程不是让用户多看几张图，而是把慢 task 自动解释为计算、调度、依赖、内存压力或额外搬运等可行动原因。
+            </p>
+          </div>
+          <span class="badge new">核心变化：可视化 -&gt; 诊断闭环</span>
+        </div>
+        <div class="summary-grid">
+          <article class="summary-card">
+            <h3>用户业务</h3>
+            <p>PyPTO 高阶算子开发与性能调优，覆盖大模型 RoPE / attention 融合算子交付与通用算子 profiling 调优。</p>
+          </article>
+          <article class="summary-card">
+            <h3>当前机制</h3>
+            <p><code>runtime_debug_mode</code> 运行前配置，同一轮运行产出程序结果和泳道图文件。</p>
+          </article>
+          <article class="summary-card">
+            <h3>核心痛点</h3>
+            <p><strong>看得到 task 慢，但不知道是不是 UB 压力、额外搬运或哪个 tensor/op 造成。</strong></p>
+          </article>
+          <article class="summary-card">
+            <h3>目标体验</h3>
+            <p>运行后自动归因，定位 task/op/tensor/source，并给出 tile、融合、nbuffer 的下一步建议。</p>
+          </article>
+        </div>
+
+        <p class="persona-section-label journey-label">Before &amp; After Journey / 旅程对照</p>
+        <div class="section-head journey-subhead">
+          <div>
+            <p>
+              Before 和 After 不强行保持相同步数。能匹配的行为按同一列附近对齐；After 新增的诊断行为被拉宽，
+              对应 Before 中“观察后只能猜测”的同一问题阶段。
+            </p>
+          </div>
+          <div class="legend" aria-label="图例">
+            <span class="badge before">Before 当前</span>
+            <span class="badge after">After 期望</span>
+            <span class="badge keep">保留动作</span>
+            <span class="badge change">改造阶段</span>
+            <span class="badge new">After 新增能力</span>
+            <span class="badge remove">被替代动作</span>
+          </div>
+        </div>
+
+        <div class="journey-wrap" tabindex="0" role="region" aria-label="用户旅程对照，可横向滚动">
+          <div class="journey" role="table" aria-label="Before and After journey map">
+            <div class="axis-label before">Before 当前旅程</div>
+
+            <article class="stage before">
+              <span class="status keep">保留</span>
+              <h3>1. 配置采集</h3>
+              <div class="field"><span class="field-label">用户行为</span><p>在代码中设置 <code>debug_options={"runtime_debug_mode": 1}</code>。</p></div>
+              <div class="field"><span class="field-label">Task</span><p>让运行过程产出执行阶段调试数据。</p></div>
+              <div class="field"><span class="field-label">Mindset</span><p>知道要采集，但还没有进入“诊断任务”的心智。</p></div>
+              <div class="field"><span class="field-label">Pain</span><span class="pain-text">入口是代码配置，不是面向任务的“性能诊断”意图。</span></div>
+            </article>
+
+            <article class="stage before">
+              <span class="status keep">保留</span>
+              <h3>2. 运行 PyPTO</h3>
+              <div class="field"><span class="field-label">用户行为</span><p>运行 PyPTO 程序，同一轮得到程序结果和 <code>merged_swimlane.json</code>。</p></div>
+              <div class="field"><span class="field-label">Task</span><p>确认当前实现的性能表现和执行产物。</p></div>
+              <div class="field"><span class="field-label">Mindset</span><p>运行结果可控，但还不知道异常是否存在。</p></div>
+              <div class="field"><span class="field-label">Pain</span><span class="pain-text">产物只是分析材料，还不是诊断结论。</span></div>
+            </article>
+
+            <article class="stage before">
+              <span class="status change">待改造</span>
+              <h3>3. 打开泳道图</h3>
+              <div class="field"><span class="field-label">用户行为</span><p>在 PyPTO Toolkit 中打开 <code>merged_swimlane.json</code>。</p></div>
+              <div class="field"><span class="field-label">Task</span><p>把运行产物转成可观察的任务时间轴。</p></div>
+              <div class="field"><span class="field-label">Mindset</span><p>开始寻找性能异常线索。</p></div>
+              <div class="field"><span class="field-label">Pain</span><span class="pain-text">需要识别正确输出目录，并主动理解图、代码、计算图之间的绑定。</span></div>
+            </article>
+
+            <article class="stage before">
+              <span class="status change">待改造</span>
+              <h3>4. 发现异常 task</h3>
+              <div class="field"><span class="field-label">用户行为</span><p>观察 task duration、气泡、依赖和计算图 copy 节点。</p></div>
+              <div class="field"><span class="field-label">Task</span><p>判断是哪段融合计算流拖慢了单 task。</p></div>
+              <div class="field"><span class="field-label">Mindset</span><p>从“看图”进入“找根因”，确定性开始下降。</p></div>
+              <div class="field"><span class="field-label">Pain</span><span class="pain-text key">看见慢，但看不见根因。</span></div>
+            </article>
+
+            <article class="stage before" style="grid-column: span 2;">
+              <span class="status remove">被替代</span>
+              <h3>5. 猜测 UB / 搬运原因</h3>
+              <div class="field"><span class="field-label">用户行为</span><p>在计算慢、调度等待、依赖阻塞、UB spill、额外搬运之间做人工判断。</p></div>
+              <div class="field"><span class="field-label">Task</span><p>把泳道图现象翻译成可调的 PyPTO 表达问题。</p></div>
+              <div class="field"><span class="field-label">Mindset</span><p>知道可能是 UB/搬运，但缺少能说服自己的证据。</p></div>
+              <div class="field"><span class="field-label">Pain</span><span class="pain-text key">缺少“是否 UB 压力过大”的明确证据，也不知道哪些 tensor 贡献了 live memory 峰值。</span></div>
+            </article>
+
+            <article class="stage before">
+              <span class="status remove">被替代</span>
+              <h3>6. 反复改配置</h3>
+              <div class="field"><span class="field-label">用户行为</span><p>调 tile 轴、改中间结果、试 <code>vec_nbuffer_setting</code> 或融合策略。</p></div>
+              <div class="field"><span class="field-label">Task</span><p>找到能降低单 task 耗时的配置组合。</p></div>
+              <div class="field"><span class="field-label">Mindset</span><p>进入试错谷底，担心每次修改都只是偶然变好。</p></div>
+              <div class="field"><span class="field-label">Pain</span><span class="pain-text key">试错成本高，且每次修改的因果不确定。</span></div>
+            </article>
+
+            <article class="stage before">
+              <span class="status change">待改造</span>
+              <h3>7. 人工收敛</h3>
+              <div class="field"><span class="field-label">用户行为</span><p>再次运行、人工对比泳道图，凭经验判断是否达到可交付性能。</p></div>
+              <div class="field"><span class="field-label">Task</span><p>决定这组调参是否可以交付或继续深挖。</p></div>
+              <div class="field"><span class="field-label">Mindset</span><p>有一定缓解，但很难把经验复用给团队或 agent。</p></div>
+              <div class="field"><span class="field-label">Pain</span><span class="pain-text">结论不容易沉淀成结构化诊断证据。</span></div>
+            </article>
+
+            <div class="emotion-row">
+              <div class="axis-label neutral">情绪曲线</div>
+              <div class="emotion-card">
+                <div class="emotion-title">
+                  <span>情绪曲线对照：Before 走向试错谷底，After 保持确定性</span>
+                  <span>After 阶段更多，但每一步更安全</span>
+                </div>
+                <svg viewbox="0 0 1000 154" role="img" aria-label="Before and After emotion curves compared">
+                  <line x1="24" y1="28" x2="980" y2="28" stroke="#d8d5cd" stroke-width="1"></line>
+                  <line x1="24" y1="76" x2="980" y2="76" stroke="#d8d5cd" stroke-width="1"></line>
+                  <line x1="24" y1="124" x2="980" y2="124" stroke="#d8d5cd" stroke-width="1"></line>
+                  <path d="M58,44 C135,46 158,50 210,54 C286,61 308,70 370,80 C443,92 477,106 538,116 C620,132 668,135 735,128 C818,120 876,112 942,104" fill="none" stroke="#a96135" stroke-width="4" stroke-linecap="round"></path>
+                  <path d="M58,42 C134,40 170,42 220,45 C294,50 334,48 398,43 C468,39 510,44 572,46 C648,49 700,45 766,42 C842,38 890,40 942,36" fill="none" stroke="#5d4e86" stroke-width="4" stroke-linecap="round"></path>
+                  <g fill="#a96135" stroke="#f7f4ec" stroke-width="3">
+                    <circle cx="58" cy="44" r="6"></circle><circle cx="210" cy="54" r="6"></circle><circle cx="370" cy="80" r="6"></circle><circle cx="538" cy="116" r="7"></circle><circle cx="735" cy="128" r="7"></circle><circle cx="942" cy="104" r="6"></circle>
+                  </g>
+                  <g fill="#5d4e86" stroke="#f7f4ec" stroke-width="3">
+                    <circle cx="58" cy="42" r="6"></circle><circle cx="220" cy="45" r="6"></circle><circle cx="398" cy="43" r="6"></circle><circle cx="572" cy="46" r="6"></circle><circle cx="766" cy="42" r="6"></circle><circle cx="942" cy="36" r="6"></circle>
+                  </g>
+                  <rect x="42" y="134" width="10" height="10" rx="5" fill="#a96135"></rect>
+                  <text x="60" y="143" class="curve-label">Before：观察后只能猜，试错阶段跌到谷底</text>
+                  <rect x="388" y="134" width="10" height="10" rx="5" fill="#5d4e86"></rect>
+                  <text x="406" y="143" class="curve-label">After：先归因再下钻，验证闭环保持稳定</text>
+                  <text x="36" y="22" class="curve-label">高确定性</text>
+                  <text x="490" y="112" class="curve-label">猜测谷底</text>
+                  <text x="850" y="30" class="curve-label">安全验证</text>
+                </svg>
+              </div>
+            </div>
+
+            <p class="map-note">
+              Before 的情绪不是在配置或运行阶段崩掉，而是在“看见异常但无法归因”之后持续走低。issue #2141 的本质诉求，是把这段最消耗专家注意力的灰区变成工具可解释、可验证、可复用的诊断链路。
+            </p>
+
+            <div class="axis-label after">After 期望旅程</div>
+
+            <article class="stage after" style="grid-column: span 2;">
+              <span class="status keep">保留 + 明确化</span>
+              <h3>1. 以任务意图启动采集</h3>
+              <div class="field"><span class="field-label">用户行为</span><p>仍通过 <code>runtime_debug_mode</code> 运行一次 PyPTO 程序。</p></div>
+              <div class="field"><span class="field-label">Task</span><p>采集本轮性能诊断所需的执行上下文。</p></div>
+              <div class="field"><span class="field-label">Mindset</span><p>入口熟悉，但任务意图更明确。</p></div>
+              <div class="field"><span class="field-label">Value</span><span class="value-text">保留当前机制，不破坏用户已掌握流程。</span></div>
+            </article>
+
+            <article class="stage after">
+              <span class="status change">改造</span>
+              <h3>2. 自动绑定产物</h3>
+              <div class="field"><span class="field-label">用户行为</span><p>打开 Toolkit 后确认系统识别到最新运行产物。</p></div>
+              <div class="field"><span class="field-label">Task</span><p>绑定 <code>merged_swimlane.json</code>、<code>program.json</code>、源码和 semantic label。</p></div>
+              <div class="field"><span class="field-label">Mindset</span><p>不再担心打开错轮次或漏看关联产物。</p></div>
+              <div class="field"><span class="field-label">Value</span><span class="value-text">减少手工找文件和错配上下文。</span></div>
+            </article>
+
+            <article class="stage new-step" style="grid-column: span 2;">
+              <span class="status add">新增</span>
+              <h3>3. 先给性能总览与归因</h3>
+              <div class="field"><span class="field-label">用户行为</span><p>先看最慢 task、瓶颈类型和证据强度。</p></div>
+              <div class="field"><span class="field-label">Task</span><p>快速判断异常更像 compute、schedule、dependency、memory movement 还是 UB pressure。</p></div>
+              <div class="field"><span class="field-label">Mindset</span><p>先获得方向，再决定是否下钻。</p></div>
+              <div class="field"><span class="field-label">Value</span><span class="value-text">把“看图猜”前移为“工具先归因”。</span></div>
+            </article>
+
+            <article class="stage new-step">
+              <span class="status add">新增</span>
+              <h3>4. 下钻内存压力</h3>
+              <div class="field"><span class="field-label">用户行为</span><p>查看异常 task 的 peak live memory、UB headroom、额外搬运和 Top contributors。</p></div>
+              <div class="field"><span class="field-label">Task</span><p>确认哪些 tensor/op/融合片段导致内存压力。</p></div>
+              <div class="field"><span class="field-label">Mindset</span><p>从“怀疑 spill”变成“有证据可讨论”。</p></div>
+              <div class="field"><span class="field-label">Value</span><span class="value-text">把 UB/spill 从经验判断变成诊断证据。</span></div>
+            </article>
+
+            <article class="stage after">
+              <span class="status add">新增</span>
+              <h3>5. 回到 PyPTO 动作</h3>
+              <div class="field"><span class="field-label">用户行为</span><p>从诊断结论跳到源码、计算图和调参建议。</p></div>
+              <div class="field"><span class="field-label">Task</span><p>决定调小哪个 tile 轴、减少哪些中间结果，或是否调整 <code>vec_nbuffer_setting</code>。</p></div>
+              <div class="field"><span class="field-label">Mindset</span><p>行动方向明确，试错范围缩小。</p></div>
+              <div class="field"><span class="field-label">Value</span><span class="value-text">诊断直接落到用户能改的 PyPTO 表达。</span></div>
+            </article>
+
+            <article class="stage after">
+              <span class="status add">新增</span>
+              <h3>6. 再跑自动对比</h3>
+              <div class="field"><span class="field-label">用户行为</span><p>修改后再次运行，并查看新旧结果对比。</p></div>
+              <div class="field"><span class="field-label">Task</span><p>比较 task time、额外搬运、UB pressure 和利用率是否改善。</p></div>
+              <div class="field"><span class="field-label">Mindset</span><p>从试错转为验证，每轮修改都有因果记录。</p></div>
+              <div class="field"><span class="field-label">Value</span><span class="value-text">证明性能提升是否来自 UB 压力下降。</span></div>
+            </article>
+          </div>
+        </div>
+
+        <p class="persona-section-label journey-label">Change Summary / 增删改摘要</p>
+        <div class="section-head journey-subhead">
+          <div>
+            <p>After 不是简单增加 UI 控件，而是把原本堆在用户脑内的判断拆成工具可见、可验证、可复用的阶段。</p>
+          </div>
+        </div>
+        <div class="summary-grid">
+          <article class="summary-card">
+            <h3>保留</h3>
+            <p>保留 <code>runtime_debug_mode</code> 运行采集入口，保留 <code>merged_swimlane.json</code> 作为核心可视化产物。</p>
+          </article>
+          <article class="summary-card">
+            <h3>改造</h3>
+            <p>把“手工找文件、手工绑定上下文、手工读图归因”改成“Toolkit 自动识别本轮运行与关联产物”。</p>
+          </article>
+          <article class="summary-card">
+            <h3>新增</h3>
+            <p>新增性能总览归因、内存压力诊断、Top contributors、源码回跳、调参建议和再次运行对比。</p>
+          </article>
+          <article class="summary-card">
+            <h3>弱化</h3>
+            <p>弱化专家肉眼猜测与盲目试错，让 UB spill / 额外搬运从经验假设变成结构化证据。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="scenario-convergence-title">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">Scenario Convergence</p>
+            <h2 id="scenario-convergence-title">双场景痛点对齐：把两个场景映射到同一主线</h2>
+            <p>
+              上面的 Before/After 旅程以融合算子诊断场景为主线。本课题其实有两类来源不同的工作场景：一是算子开发者的<strong>通用算子 profiling 调优</strong>（匿名研究归纳），
+              二是 <strong>PyPTO 融合算子诊断</strong>（issue #2141）。两者工具入口不同，但痛点结构同构——都能按同一条「采集 → 归因 → 下钻 → 动作与验证」主线对齐，因此可以共用一套诊断体验，而不是两套割裂界面。
+            </p>
+          </div>
+          <span class="badge new">One spine · Two scenarios</span>
+        </div>
+        <div class="value-grid">
+          <article class="value-card">
+            <h3>阶段 1 · 采集 Capture</h3>
+            <div class="field"><span class="field-label">通用 profiling 场景</span><p>打印 Profiling summary（核数、总耗时、AI CPU / AI Vector 各模块耗时），凭经验先判 Compute / Vector / MTE2 bound。</p></div>
+            <div class="field"><span class="field-label">融合诊断场景</span><p><code>runtime_debug_mode</code> 同轮产出程序结果与 <code>merged_swimlane.json</code>。</p></div>
+            <div class="field"><span class="field-label">共同解法</span><span class="value-text">保留既有采集入口，自动绑定本轮产物，并预判 bound 方向。</span></div>
+          </article>
+          <article class="value-card">
+            <h3>阶段 2 · 归因 Attribute</h3>
+            <div class="field"><span class="field-label">通用 profiling 场景</span><p>看耗时后靠自研表格手输矩阵尺寸，算搬运量除带宽推理论耗时，过程低效。</p></div>
+            <div class="field"><span class="field-label">融合诊断场景</span><p>在泳道图里人工找慢 task，看得到慢但无法归因 UB 压力或额外搬运。</p></div>
+            <div class="field"><span class="field-label">共同解法</span><span class="value-text">工具先给 Top 异常 task、瓶颈类型与理论 vs 实测 gap，内置推演免手工表格。</span></div>
+          </article>
+          <article class="value-card">
+            <h3>阶段 3 · 下钻 Drill</h3>
+            <div class="field"><span class="field-label">通用 profiling 场景</span><p>Vector 指令耗时无参考资料、缺基线；流水图片段要人工对应源码。</p></div>
+            <div class="field"><span class="field-label">融合诊断场景</span><p>需下钻 peak live memory、UB headroom、额外搬运与 Top contributors。</p></div>
+            <div class="field"><span class="field-label">共同解法</span><span class="value-text">分段泳道 + 内存压力面板 + 指令耗时基线库 + 点节点直跳源码。</span></div>
+          </article>
+          <article class="value-card">
+            <h3>阶段 4 · 动作与验证 Act &amp; Verify</h3>
+            <div class="field"><span class="field-label">通用 profiling 场景</span><p>多版方案逐一试，局部调优引发全局劣化，「按下葫芦浮起瓢」。</p></div>
+            <div class="field"><span class="field-label">融合诊断场景</span><p>反复改 tile / nbuffer，每次修改的因果不确定。</p></div>
+            <div class="field"><span class="field-label">共同解法</span><span class="value-text">建议自带验证指标 + Before/After 复跑对比 + 局部改动的全局边际预判。</span></div>
+          </article>
+        </div>
+        <p class="map-note" style="grid-column: auto; margin-top: 18px;">
+          两个场景共用一条主线后，「用户场景」页签的端到端故事就是这张映射表的融合落地：通用 profiling 场景贡献「自动算 + 直接找」能力，融合诊断场景贡献「归因下钻 + 复跑验证」能力，合起来覆盖「自动算、直接找、全预判」。
+        </p>
+      </section>
+    </div>
+
+    <div id="scenario-section" class="research-group tab-page" aria-label="用户场景">
+      <section class="section" aria-labelledby="scenario-e2e-title">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">End-to-End Scenario</p>
+            <h2 id="scenario-e2e-title">端到端融合场景：一次 attention_fusion_case 的性能交付</h2>
+            <p>
+              把匿名研究归纳的<strong>通用算子 profiling 场景</strong>与 issue #2141 的<strong>融合算子诊断场景</strong>融合成一个连续故事：
+              主角是融合性能工程师，目标是把一个性能不达标的 <code>attention_fusion_case</code> 融合算子调到可交付。
+              故事沿「采集 → 归因 → 下钻 → 动作与验证」主线推进，每一幕同时化解两个场景在该阶段的痛点，
+              标签 [A] 指访谈场景痛点、[B] 指 issue 场景痛点。
+            </p>
+          </div>
+          <span class="badge new">A + B 融合 · 单一主线</span>
+        </div>
+
+        <p class="persona-section-label">One Story / 一条主线</p>
+        <div class="section-head journey-subhead">
+          <div>
+            <p>
+              主角：融合性能工程师；触发：交付前发现 <code>attention_fusion_case</code> 单 task 耗时偏高；
+              期望：不再靠 summary 经验判 bound、手搓表格算理论值、肉眼对图找码、盲目试错，
+              而是被工具一路带到「知道为什么、该改哪里、改了有没有用」。
+            </p>
+          </div>
+          <span class="badge new">Persona：Fusion Performance Engineer</span>
+        </div>
+
+        <div class="scenario-storyboard" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
+          <article class="story-frame">
+            <h3>场景 1 · 采集｜交付前发现慢</h3>
+            <div class="wireframe" aria-label="采集入口与产物绑定 wireframe">
+              <div class="wire-topbar"></div>
+              <div class="wire-main">
+                <div class="wire-code">
+                  <div class="wire-code-line"></div>
+                  <div class="wire-code-line focus"></div>
+                  <div class="wire-code-line short"></div>
+                  <div class="wire-code-line"></div>
+                </div>
+                <div class="wire-panel">
+                  <div class="panel-metric"><span>swimlane</span><strong>bound ✓</strong></div>
+                  <div class="panel-metric"><span>program</span><strong>bound ✓</strong></div>
+                  <div class="panel-metric"><span>operator</span><strong>attention_fusion_case</strong></div>
+                  <div class="panel-metric"><span>预判</span><strong>MTE2-bound?</strong></div>
+                </div>
+              </div>
+            </div>
+            <span class="attention">注意力：采集开关 + 产物自动绑定</span>
+            <div class="field"><span class="field-label">用户动作</span><p>打印 Profiling summary，并用 <code>runtime_debug_mode</code> 跑一轮，同轮拿到程序结果、各模块耗时与 <code>merged_swimlane.json</code>。</p></div>
+            <div class="field"><span class="field-label">融合痛点</span><p>[A] summary 只有核数与模块耗时，要凭经验判 Compute / Vector / MTE2 bound；[B] 产物只是材料，不是结论。</p></div>
+            <div class="field"><span class="field-label">系统解法</span><span class="value-text">Toolkit 自动绑定本轮 <code>merged_swimlane.json</code>、<code>program.json</code>，并预判 bound 方向。</span></div>
+          </article>
+
+          <article class="story-frame">
+            <h3>场景 2 · 归因｜先知道看哪里</h3>
+            <div class="wireframe" aria-label="Top 异常 task 排名 wireframe">
+              <div class="wire-topbar"></div>
+              <div class="wire-main">
+                <div class="wire-panel">
+                  <div class="wire-list">
+                    <div class="wire-row focus"><span>T029 · memory move</span><strong>high</strong></div>
+                    <div class="wire-row"><span>T019 · compute</span><strong>mid</strong></div>
+                    <div class="wire-row"><span>T037 · wait</span><strong>low</strong></div>
+                  </div>
+                </div>
+                <div class="wire-swimlane">
+                  <div class="lane"><span>AIC</span><div class="lane-bar"></div></div>
+                  <div class="lane"><span>AIV0</span><div class="lane-bar focus"></div></div>
+                  <div class="lane"><span>AIV1</span><div class="lane-bar wait"></div></div>
+                </div>
+              </div>
+            </div>
+            <span class="attention">注意力：异常 task 排名与瓶颈类型</span>
+            <div class="field"><span class="field-label">用户动作</span><p>打开诊断总览，看 Top 异常 task 排名、瓶颈类型与证据强度。</p></div>
+            <div class="field"><span class="field-label">融合痛点</span><p>[A] 原来要在 MindStudio Insight 里逐段翻耗时；[B] 原来在空泳道图里人工找慢 task。</p></div>
+            <div class="field"><span class="field-label">系统解法</span><span class="value-text">直接给 Top task <code>DEV0-C05-T029</code>、bottleneck = memory movement、evidence = high。</span></div>
+          </article>
+
+          <article class="story-frame">
+            <h3>场景 3 · 归因深化｜理论 vs 实测</h3>
+            <div class="wireframe" aria-label="理论基准线对照 wireframe">
+              <div class="wire-topbar"></div>
+              <div class="wire-main">
+                <div class="wire-swimlane">
+                  <div class="lane lane-ref"><span>AIV0</span><div class="lane-bar focus"></div></div>
+                  <div class="lane"><span>AIC</span><div class="lane-bar"></div></div>
+                  <div class="lane"><span>AIV1</span><div class="lane-bar wait"></div></div>
+                </div>
+                <div class="wire-panel">
+                  <div class="panel-metric"><span>理论</span><strong>128.0 us</strong></div>
+                  <div class="panel-metric up"><span>实测</span><strong>156.0 us</strong></div>
+                  <div class="panel-metric up"><span>gap</span><strong>+28.0 us</strong></div>
+                  <div class="panel-metric"><span>带宽利用率</span><strong>62%</strong></div>
+                </div>
+              </div>
+            </div>
+            <span class="attention">注意力：理论基准线与 gap</span>
+            <div class="field"><span class="field-label">用户动作</span><p>在慢 task 上看理论耗时基准线（虚线）与实测 bar 的 gap。</p></div>
+            <div class="field"><span class="field-label">融合痛点</span><p>[A] 每个算子手搓一张表算搬运量、带宽利用率。</p></div>
+            <div class="field"><span class="field-label">系统解法</span><span class="value-text">按 tensor 形状自动推演理论耗时，基准线叠在实测 bar 上，gap 是待解释差额，不等于可实现的优化收益。</span></div>
+          </article>
+
+          <article class="story-frame">
+            <h3>场景 4 · 下钻｜内存压力 + 图码联跳</h3>
+            <div class="wireframe" aria-label="内存压力与源码联跳 wireframe">
+              <div class="wire-topbar"></div>
+              <div class="wire-main">
+                <div class="wire-graph">
+                  <div class="graph-row">
+                    <span class="graph-node"></span>
+                    <span class="graph-edge"></span>
+                    <span class="graph-node focus"></span>
+                    <span class="graph-edge"></span>
+                    <span class="graph-node"></span>
+                  </div>
+                </div>
+                <div class="wire-panel">
+                  <div class="panel-metric up"><span>headroom</span><strong>24.0 KiB</strong></div>
+                  <div class="panel-metric"><span>top</span><strong>k_cache_tile</strong></div>
+                  <div class="panel-metric"><span>reload</span><strong>GM -&gt; UB</strong></div>
+                  <span class="wire-jump">-&gt; attention_case.py:96</span>
+                </div>
+              </div>
+            </div>
+            <span class="attention">注意力：内存压力 + 指令基线 + 图码联跳</span>
+            <div class="field"><span class="field-label">用户动作</span><p>点分段泳道的 memory 段，下钻 UB headroom 与 Top contributors，再点计算图节点跳源码。</p></div>
+            <div class="field"><span class="field-label">融合痛点</span><p>[B] 怀疑 UB spill 无证据；[A] Vector 指令耗时无基线、流水图与代码需人工对应。</p></div>
+            <div class="field"><span class="field-label">系统解法</span><span class="value-text">给 headroom 24.0 KiB、top = <code>k_cache_tile</code>、GM→UB reload；指令段引用耗时基线；点节点直跳源码行。</span></div>
+          </article>
+
+          <article class="story-frame">
+            <h3>场景 5 · 动作｜落到可改的表达</h3>
+            <div class="wireframe" aria-label="调参建议与预期指标 wireframe">
+              <div class="wire-topbar"></div>
+              <div class="wire-main">
+                <div class="wire-code">
+                  <div class="wire-code-line short"></div>
+                  <div class="wire-code-line add"></div>
+                  <div class="wire-code-line focus"></div>
+                  <div class="wire-code-line"></div>
+                </div>
+                <div class="wire-panel">
+                  <div class="panel-metric"><span>tile_k</span><strong>256 -&gt; 128</strong></div>
+                  <div class="panel-metric"><span>nbuffer</span><strong>2 -&gt; 1</strong></div>
+                  <div class="panel-metric"><span>预期</span><strong>task↓ / move↓</strong></div>
+                </div>
+              </div>
+            </div>
+            <span class="attention">注意力：建议绑定动作 + 预期验证指标</span>
+            <div class="field"><span class="field-label">用户动作</span><p>采纳建议，调小某 tile 轴、改 <code>vec_nbuffer_setting</code> 或收紧融合边界。</p></div>
+            <div class="field"><span class="field-label">融合痛点</span><p>[A][B] 原来建议泛泛，不知改哪、改了影响哪个指标。</p></div>
+            <div class="field"><span class="field-label">系统解法</span><span class="value-text">每条建议绑定 tile / nbuffer / fusion boundary，并声明预期验证指标。</span></div>
+          </article>
+
+          <article class="story-frame">
+            <h3>场景 6 · 验证｜就地差分 + 全局预判</h3>
+            <div class="wireframe" aria-label="Before/After 就地差分 wireframe">
+              <div class="wire-topbar"></div>
+              <div class="wire-main">
+                <div class="wire-swimlane">
+                  <div class="lane"><span>before</span><div class="lane-bar"></div></div>
+                  <div class="lane"><span>after</span><div class="lane-bar focus" style="width: 62%;"></div></div>
+                </div>
+                <div class="wire-panel">
+                  <div class="panel-metric delta"><span>task</span><strong>12.8 → 12.3μs · 预计</strong></div>
+                  <div class="panel-metric"><span>collected</span><strong>Unavailable</strong></div>
+                  <div class="panel-metric"><span>identity</span><strong>unavailable</strong></div>
+                </div>
+              </div>
+            </div>
+            <span class="attention">注意力：预计变化与已采集验证分层</span>
+            <div class="field"><span class="field-label">用户动作</span><p>先应用 构造 建议查看预计变化；取得同口径 paired run 后再查看 collected delta。</p></div>
+            <div class="field"><span class="field-label">融合痛点</span><p>[A] 局部调优引发全局劣化「按下葫芦浮起瓢」；[B] 反复改因果不确定。</p></div>
+            <div class="field"><span class="field-label">系统解法</span><span class="value-text">当前先显示 task 12.8 → 预计复跑12.3μs，并把已采集 run 对比固定为 unavailable；只有 identity contract matched 后才展示 collected delta。</span></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="principles-title">
+        <div class="section-head">
+          <div>
+            <h2 id="principles-title">设计原则</h2>
+            <p>这个场景的核心用户是高阶算子开发/调优用户。After 旅程要围绕他们最真实的目标设计：更快定位根因，更稳选择下一步动作。</p>
+          </div>
+        </div>
+        <div class="principles">
+          <div class="principle-quote">
+            <p>不要让用户成为泳道图侦探。让工具把执行现象翻译成 PyPTO 开发动作。</p>
+            <span>Target experience statement</span>
+          </div>
+          <div class="principle-list">
+            <div class="principle">
+              <strong>先归因，再下钻</strong>
+              <p>用户进入性能分析时，先看到瓶颈类型和证据强度，再决定看 task、tensor、copy 或源码。</p>
+            </div>
+            <div class="principle">
+              <strong>痛点必须绑定动作</strong>
+              <p>每一个痛点都落到具体阶段：打开产物、观察异常、猜测根因、试错验证，而不是作为散落的用户抱怨。</p>
+            </div>
+            <div class="principle">
+              <strong>建议必须可验证</strong>
+              <p>每条建议都应该能在下一轮运行中被对比验证，例如 task time、额外搬运、UB pressure 是否改善。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="value-title">
+        <div class="section-head">
+          <div>
+            <h2 id="value-title">设计价值</h2>
+            <p>这个 After 旅程的价值不在“阶段更多”，而在每一步都有证据、方向和验证方式，让专家用户更安全地推进性能交付。</p>
+          </div>
+        </div>
+        <div class="value-grid">
+          <article class="value-card user">
+            <h3>降低专家认知负担</h3>
+            <ul>
+              <li>把最消耗心力的“猜测 UB / 搬运根因”变成工具先给证据。</li>
+              <li>让用户从读图侦查转向判断和决策，情绪谷底被抬高。</li>
+            </ul>
+          </article>
+          <article class="value-card product">
+            <h3>强化 Toolkit 核心定位</h3>
+            <ul>
+              <li>从执行可视化升级为性能诊断入口。</li>
+              <li>把 issue #2141 从单点指标需求扩展成 Fusion Performance Advisor 能力雏形。</li>
+            </ul>
+          </article>
+          <article class="value-card system">
+            <h3>支撑 IDE 与 agent 自动化</h3>
+            <ul>
+              <li>结构化输出瓶颈类型、内存压力、Top contributors 和调参建议。</li>
+              <li>为性能 skill、自动调优和跨轮对比提供稳定数据接口。</li>
+            </ul>
+          </article>
+          <article class="value-card org">
+            <h3>沉淀可复用调优知识</h3>
+            <ul>
+              <li>有效动作可以沉淀成团队规则，而不是停留在个人经验和截图里。</li>
+              <li>同类 RoPE / attention 融合片段再次出现时，可以更快复用诊断链路。</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="craft-title">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">Experience Craft</p>
+            <h2 id="craft-title">专业体验设计手法</h2>
+            <p>面向高阶调优专家的诊断场景，交互与视觉手法都服务于一个目标：压缩「看见慢 → 知道为什么 → 该改哪里」的注意力成本，并让每一步都可信、可验证。</p>
+          </div>
+          <span class="badge new">Interaction · Visual</span>
+        </div>
+        <div class="principles">
+          <div class="principle-quote">
+            <p>专家要的不是更多图表，而是更短的「看见慢 → 知道为什么 → 该改哪里」路径。</p>
+            <span>Craft principle</span>
+          </div>
+          <div class="principle-list">
+            <div class="principle"><strong>归因漏斗 · 渐进式披露 Progressive Disclosure</strong><p>默认只暴露 Top 1–3 异常与瓶颈类型，证据随下钻逐层展开，专家不必在满屏 track 里扫描。</p></div>
+            <div class="principle"><strong>四视图联动 · Brushing &amp; Linking</strong><p>泳道图、内存曲线、计算图、源码共享选择态，点一处全部高亮同步，直接消除「图与代码无映射」的人工对应。</p></div>
+            <div class="principle"><strong>证据强度即视觉编码 · Confidence Encoding</strong><p>用饱和度、虚线、hatch 纹理把 high / partial / insufficient 编码进 UI；证据不足时降级为「可能原因」，不把推断包装成事实。</p></div>
+            <div class="principle"><strong>理论基准线 · Reference Line / Anchoring</strong><p>把自动推演的理论耗时作为基准叠加在实测 bar 上，gap 是待解释差额，不等于可实现的优化收益，替掉「每个算子手搓一张表」。</p></div>
+            <div class="principle"><strong>语义缩放 · Semantic Zoom</strong><p>同一 task 从总耗时 → compute / memory / wait / unaccounted 分段 → 单 tensor 贡献，逐级放大而不切换心智。</p></div>
+            <div class="principle"><strong>就地差分 · Diegetic Diff Overlay</strong><p>预计变化与真实 collected delta 都回到原泳道与指标，但必须以明确状态分层；没有有效 paired run 时只展示 构造 projection 和 unavailable。</p></div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <div id="persona-section" class="research-group tab-page active" aria-label="用户画像">
+    <section class="section persona-page" aria-labelledby="persona-title">
+      <div class="persona-shell">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">Research Area 01</p>
+            <h2 id="persona-title">用户画像</h2>
+            <p>
+              以下画像来自匿名研究归纳与 issue #2141 的问题表达、术语密度和调优诉求：它不是对用户身份的事实认定，
+              而是用于指导 PyPTO Toolkit 诊断能力设计的高概率用户模型，并用同一角色的两个业务任务来呈现。
+            </p>
+          </div>
+          <span class="badge new">高阶性能调优用户</span>
+        </div>
+
+        <p class="persona-section-label">Diagnosis Process / 诊断过程（情境时长）</p>
+        <div class="diagnosis-process" aria-label="用户诊断过程概览">
+          <article class="process-step">
+            <div class="process-top">
+              <span class="process-icon">01</span>
+              <span>18 Minutes</span>
+            </div>
+            <h3>Capture</h3>
+            <div class="pill-list">
+              <span class="persona-pill">runtime_debug_mode</span>
+              <span class="persona-pill">merged_swimlane.json</span>
+              <span class="persona-pill">程序结果同轮产出</span>
+            </div>
+          </article>
+
+          <article class="process-step">
+            <div class="process-top">
+              <span class="process-icon">02</span>
+              <span>45 Minutes</span>
+            </div>
+            <h3>Diagnose</h3>
+            <div class="pill-list">
+              <span class="persona-pill">慢 task</span>
+              <span class="persona-pill">UB pressure</span>
+              <span class="persona-pill">额外 GM/UB 搬运</span>
+              <span class="persona-pill">Top contributors</span>
+            </div>
+          </article>
+
+          <article class="process-step">
+            <div class="process-top">
+              <span class="process-icon">03</span>
+              <span>75 Minutes</span>
+            </div>
+            <h3>Validate</h3>
+            <div class="pill-list">
+              <span class="persona-pill">tile 轴调整</span>
+              <span class="persona-pill">nbuffer 策略</span>
+              <span class="persona-pill">新旧对比</span>
+              <span class="persona-pill">可交付结论</span>
+            </div>
+          </article>
+        </div>
+
+        <p class="persona-section-label">User Persona / 用户画像</p>
+        <div class="persona-board">
+          <figure class="persona-photo">
+            <img src="assets/operator-dev-female-01.png" alt="高阶 PyPTO 算子调优用户插画头像">
+          </figure>
+
+          <div class="persona-profile-stack">
+            <div class="carousel-tabs" role="tablist" aria-label="同一用户的两个业务任务">
+              <button type="button" class="carousel-tab is-active" data-slide="0" aria-selected="true"><span class="idx">1</span>融合算子性能交付</button>
+              <button type="button" class="carousel-tab" data-slide="1" aria-selected="false"><span class="idx">2</span>通用算子 profiling 调优</button>
+            </div>
+
+            <div class="persona-carousel" aria-label="业务任务轮播">
+              <div class="carousel-slide is-active" data-slide="0">
+                <div class="quote-band">
+                  <span class="quote-mark">“</span>
+                  <p>我已经能看到 task 慢了，但我需要工具告诉我是不是 UB 压力或额外搬运，以及该改哪里。</p>
+                </div>
+
+                <article class="persona-id-card">
+                  <div class="persona-id-head">
+                    <img class="persona-mini" src="assets/operator-dev-female-01.png" alt="">
+                    <div>
+                      <h3>Fusion Performance Engineer / 融合性能工程师</h3>
+                      <p>PyPTO / CANN 高阶算子开发与性能调优用户</p>
+                    </div>
+                  </div>
+                  <div class="persona-facts">
+                    <div><strong>业务:</strong> <span>LLM RoPE / Attention 融合算子性能交付</span></div>
+                    <div><strong>算子:</strong> <span><code>attention_case</code> 及同类融合计算流</span></div>
+                    <div><strong>关注:</strong> <span>UB 容量、live tensor 峰值、spill、额外 GM/UB 搬运</span></div>
+                  </div>
+                  <p>
+                    该用户已经跨过基础使用阶段，能够阅读泳道图和计算图，也能修改 tile、融合策略或 <code>vec_nbuffer_setting</code>。
+                    在这个任务里，他的核心困境不是“不会调”，而是现有工具没有把 UB 压力、额外搬运这类性能现象翻译成可验证的根因证据。
+                  </p>
+                  <div class="persona-id-needs">
+                    <h4>Needs / 诉求</h4>
+                    <ul class="arrow-list">
+                      <li>性能总览先给瓶颈类型和证据强度，而不是只展示 timeline。</li>
+                      <li>内存压力下钻要能看到 peak live memory、UB headroom 和 Top contributors。</li>
+                      <li>诊断结论要绑定 <code>merged_swimlane.json</code>、<code>program.json</code>、计算图和源码位置。</li>
+                      <li>每条建议都能被下一轮 task time、额外搬运、UB pressure 对比验证。</li>
+                    </ul>
+                  </div>
+                  <div class="persona-pain">
+                    <h4>痛点</h4>
+                    <ul class="pain-list">
+                      <li>看得到 task 慢，但无法归因是否 UB 压力、spill 或额外搬运。</li>
+                      <li>反复改 tile / nbuffer，每次修改的因果不确定，试错成本高。</li>
+                      <li>好不容易得到的调优结论，难以沉淀成结构化证据复用给团队或 agent。</li>
+                    </ul>
+                  </div>
+                </article>
+              </div>
+
+              <div class="carousel-slide" data-slide="1">
+                <div class="quote-band">
+                  <span class="quote-mark">“</span>
+                  <p>每个算子都要做一张表算理论性能，太不方便；vector 的一个计算单元该耗时多少，也没什么资料。</p>
+                </div>
+
+                <article class="persona-id-card">
+                  <div class="persona-id-head">
+                    <img class="persona-mini" src="assets/operator-dev-female-01.png" alt="">
+                    <div>
+                      <h3>Fusion Performance Engineer / 融合性能工程师</h3>
+                      <p>PyPTO / CANN 高阶算子开发与性能调优用户</p>
+                    </div>
+                  </div>
+                  <div class="persona-facts">
+                    <div><strong>业务:</strong> <span>通用算子性能调优交付</span></div>
+                    <div><strong>算子:</strong> <span>Cube / Vector 类算子及 MTE2 搬运密集算子</span></div>
+                    <div><strong>关注:</strong> <span>Bound 类型判定、理论性能推演、Vector 指令耗时、带宽利用率</span></div>
+                  </div>
+                  <p>
+                    同一位工程师在这个任务里走的是 Profiling summary → 判 bound → PyPTO Toolkit 看耗时 → 自研表格算理论性能 → 结合代码找瓶颈的链路。
+                    他的核心困境是这套分析极度“吃经验”，缺少工具化、标准化的手段把可计算的东西自动算出来。
+                  </p>
+                  <div class="persona-id-needs">
+                    <h4>Needs / 诉求</h4>
+                    <ul class="arrow-list">
+                      <li>理论性能自动推演，免去每个算子手搓一张表格。</li>
+                      <li>Vector 等指令耗时要有标准基线可查，而不是靠个人经验。</li>
+                      <li>流水图片段能直接映射到对应源码行分析。</li>
+                      <li>调优方案能预判全局边际影响，减少盲目试错。</li>
+                    </ul>
+                  </div>
+                  <div class="persona-pain">
+                    <h4>痛点</h4>
+                    <ul class="pain-list">
+                      <li>每个算子都要做一张表算搬运量、带宽利用率，过程低效。</li>
+                      <li>Vector 指令耗时无参考资料，理论估算靠经验、存在盲区。</li>
+                      <li>流水图与源码之间缺映射，需人工把图片段对应到代码。</li>
+                      <li>方案靠猜、效果靠试，局部调优可能引发全局劣化。</li>
+                    </ul>
+                  </div>
+                </article>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="persona-data-grid">
+          <article class="persona-card lavender">
+            <h3>调优性格</h3>
+            <p style="margin: -8px 0 18px; color: var(--persona-muted); font-size: 12.5px;">按两类任务构造的画像示意，不代表受访者统计。</p>
+            <div class="trait">
+              <div class="trait-labels"><span>经验判断</span><span>证据依赖</span></div>
+              <div class="trait-track" style="--value: 78%;"></div>
+            </div>
+            <div class="trait">
+              <div class="trait-labels"><span>快速试错</span><span>结构化归因</span></div>
+              <div class="trait-track" style="--value: 86%;"></div>
+            </div>
+            <div class="trait">
+              <div class="trait-labels"><span>单点观察</span><span>跨产物联动</span></div>
+              <div class="trait-track" style="--value: 62%;"></div>
+            </div>
+            <div class="trait">
+              <div class="trait-labels"><span>手工估算</span><span>自动推演</span></div>
+              <div class="trait-track" style="--value: 72%;"></div>
+            </div>
+          </article>
+
+          <article class="persona-card yellow">
+            <h3>目标</h3>
+            <ul class="arrow-list">
+              <li>判定 bound 类型，并用理论性能推演确认是否接近硬件上限。</li>
+              <li>确认慢 task 是否由 UB pressure、spill 或额外搬运触发。</li>
+              <li>定位贡献最大的 tensor、op、指令或 fusion fragment。</li>
+              <li>把结论落到 tile、nbuffer、融合边界等可改动作，并预判全局影响。</li>
+              <li>用再次运行的对比证明性能改善来自正确根因。</li>
+            </ul>
+          </article>
+
+          <article class="persona-card green donut-card">
+            <h3>诊断关注（情境权重）</h3>
+            <div class="persona-donut" aria-label="诊断关注分布图">
+              <span class="donut-tag one">38%</span>
+              <span class="donut-tag two">35%</span>
+              <span class="donut-tag three">27%</span>
+            </div>
+            <div class="donut-legend">
+              <div><span class="legend-dot" style="--dot: #171716;"></span>内存压力与额外搬运（UB / spill / GM-UB）</div>
+              <div><span class="legend-dot" style="--dot: #f4f384;"></span>计算与指令（bound / Vector 指令 / 理论性能）</div>
+              <div><span class="legend-dot hatched"></span>图码映射与调参动作</div>
+            </div>
+          </article>
+
+        </div>
+
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="non-target-title">
+      <div class="section-head">
+        <div>
+          <h2 id="non-target-title">非目标用户</h2>
+          <p>这些人群不是当前诊断闭环的优先服务对象，避免把高阶性能诊断能力稀释成泛化教程或通用 profiling 报告。</p>
+        </div>
+      </div>
+      <div class="summary-grid">
+        <article class="summary-card">
+          <h3>PyPTO 入门用户</h3>
+          <p>刚开始学习 PyPTO，主要需要概念解释、示例代码和基础错误排查。</p>
+        </article>
+        <article class="summary-card">
+          <h3>纯算法研究者</h3>
+          <p>主要关心模型算法正确性和效果，不直接负责融合算子性能归因。</p>
+        </article>
+        <article class="summary-card">
+          <h3>应用层调用方</h3>
+          <p>只需要整体 profiling 报告或端到端性能趋势，不需要下钻到 tensor/op/fusion fragment。</p>
+        </article>
+        <article class="summary-card">
+          <h3>平台管理视角</h3>
+          <p>更关注资源利用率和任务调度概览，而不是修改 tile、nbuffer 或融合边界。</p>
+        </article>
+      </div>
+    </section>
+    </div>
+  </main>
+  <script>
+    (function () {
+      const tabLinks = Array.from(document.querySelectorAll('[data-tab]'));
+      const pages = Array.from(document.querySelectorAll('.tab-page'));
+
+      function showTab(id, updateHash) {
+        const validIds = pages.map((page) => page.id);
+        const targetId = validIds.includes(id) ? id : 'persona-section';
+        pages.forEach((page) => page.classList.toggle('active', page.id === targetId));
+        tabLinks.forEach((link) => link.classList.toggle('is-active', link.dataset.tab === targetId));
+        if (updateHash) {
+          history.replaceState(null, '', '#' + targetId);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }
+
+      tabLinks.forEach((link) => {
+        link.addEventListener('click', (event) => {
+          event.preventDefault();
+          showTab(link.dataset.tab, true);
+        });
+      });
+
+      showTab(location.hash.slice(1), false);
+
+      // 用户画像 profile 业务任务轮播
+      const carouselTabs = Array.from(document.querySelectorAll('.carousel-tab'));
+      const carouselSlides = Array.from(document.querySelectorAll('.carousel-slide'));
+      carouselTabs.forEach((tab) => {
+        tab.addEventListener('click', () => {
+          const idx = tab.dataset.slide;
+          carouselTabs.forEach((t) => {
+            const active = t.dataset.slide === idx;
+            t.classList.toggle('is-active', active);
+            t.setAttribute('aria-selected', active ? 'true' : 'false');
+          });
+          carouselSlides.forEach((slide) => {
+            slide.classList.toggle('is-active', slide.dataset.slide === idx);
+          });
+        });
+      });
+    })();
+  </script>
+<script src="../../_shared/entry-shell.js?v=825d3e9441695dc2" data-entry="fusion-performance-experience" data-mode="bar" defer></script>
+</body>
+</html>

@@ -1,0 +1,838 @@
+/*
+  PTO Design Lab — 长报告统一阅读层 v3（原创）
+  owner: Claude（Batch E 私有草稿）；F 审核后随站点一并迁出
+
+  目标：让 6 篇来源不同、各带一套内联样式的长报告共享同一套阅读规范——
+  同类元素（目录、卡片、折叠区、表格、代码、图注）在哪一篇里都长一样、行为一样。
+
+  v3 相对 v2：
+  - 目录改为右侧固定栏，滚动时不移位；窄屏退回正文列顶部的目录卡；
+  - 正文收到统一阅读测量（约 44 汉字/行），表格、图示、卡片仍可用满内容区；
+  - 统一垂直节奏（章节间距、标题到正文、段落、列表、卡片内边距）；
+  - 补统一的返回顶部与标题锚点；
+  - 支持深色主题，跟随站点 `pto-design-lab:theme`；内联图示在深色下放到浅色底板上，
+    避免硬编码配色的 SVG 被反色后失真。
+
+  硬约束（content-restoration-v2）：这是叠加层。不删正文、章节、表格、图示与脚本；
+  配套 JS 只做「加 id、建目录、加导航控件」这类增强，不改写任何正文文本。
+*/
+
+/* ============================================================
+   1. Token —— 与站点导航同源
+   ============================================================ */
+:root {
+  color-scheme: light;
+
+  --rd-bg: #f6f6f3;
+  --rd-surface: #ffffff;
+  --rd-surface-2: #efefeb;
+  --rd-surface-3: #e3e3de;
+  --rd-ink: #161616;
+  --rd-ink-soft: #33332f;
+  --rd-muted: #5f5f5a;
+  --rd-faint: #8a8a84;
+  --rd-line: #e0e0da;
+  --rd-line-strong: #c6c6bf;
+
+  --rd-accent: #5b34e0;
+  --rd-accent-soft: #eee9fd;
+  --rd-accent-line: #d3c7fa;
+  --rd-on-accent: #ffffff;
+
+  --rd-warn: #8a5a0c;
+  --rd-warn-soft: #f8ecd6;
+  --rd-danger: #a33a32;
+  --rd-danger-soft: #faeae8;
+  --rd-ok: #2f7a4a;
+  --rd-ok-soft: #e7f3ec;
+
+  --rd-radius: 14px;
+  --rd-radius-sm: 10px;
+  --rd-radius-xs: 8px;
+  --rd-shadow: 0 1px 2px rgba(20, 20, 20, .06), 0 6px 20px rgba(20, 20, 20, .05);
+  --rd-plate: transparent;          /* 深色下给图示垫的浅色底板 */
+  --rd-plate-pad: 0px;
+
+  --rd-font: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", "Noto Sans CJK SC", sans-serif;
+  --rd-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* 正文列 900px，在屏幕内左右居中；顶部导航条改为满屏自适应，不再与它对齐 */
+  --rd-content: 900px;
+  --rd-gutter: 32px;
+  --rd-measure: 740px;              /* 正文阅读测量：约 44 汉字 / 75 拉丁字符 一行 */
+  /* 全站统一的屏幕边距：顶部导航条、右侧目录栏、返回顶部三者共用，左右一致 */
+  --rd-edge: clamp(14px, 1.6vw, 26px);
+  --rd-rail: 0px;                   /* 右侧目录栏宽度，宽屏才给值 */
+
+  /* 垂直节奏刻度 */
+  --rd-space-section: 56px;
+  --rd-space-h2: 16px;
+  --rd-space-h3: 28px;
+  --rd-space-para: 14px;
+  --rd-space-list: 16px;
+  --rd-space-item: 6px;
+  --rd-space-block: 28px;
+  --rd-pad-card: 20px 22px;
+  --rd-pad-card-sm: 14px 16px;
+
+  /* —— 把各报告自带的 token 名指向同一组值 —— */
+  --paper: var(--rd-bg);
+  --bg: var(--rd-bg);
+  --ground: var(--rd-bg);
+  --surface: var(--rd-surface);
+  --panel: var(--rd-surface);
+  --surface-2: var(--rd-surface-2);
+  --wash: var(--rd-surface-2);
+  --soft: var(--rd-surface-2);
+  --ink: var(--rd-ink);
+  --dark: var(--rd-ink);
+  --muted: var(--rd-muted);
+  --faint: var(--rd-faint);
+  --line: var(--rd-line);
+  --line2: var(--rd-line-strong);
+  --accent: var(--rd-accent);
+  --teal: var(--rd-accent);
+  --blue: var(--rd-accent);
+  --violet: var(--rd-accent);
+  --purple: var(--rd-accent);
+  --amber: var(--rd-warn);
+  --red: var(--rd-danger);
+  --green: var(--rd-ok);
+  --accent-soft: var(--rd-accent-soft);
+  --soft-teal: var(--rd-accent-soft);
+  --soft-violet: var(--rd-accent-soft);
+  --soft-amber: var(--rd-warn-soft);
+  --soft-red: var(--rd-danger-soft);
+  --good: var(--rd-ok);
+  --good-soft: var(--rd-ok-soft);
+  --success: var(--rd-ok);
+  --warn: var(--rd-warn);
+  --warn-soft: var(--rd-warn-soft);
+  --warning: var(--rd-warn);
+  --risk: var(--rd-danger);
+  --risk-soft: var(--rd-danger-soft);
+  --danger: var(--rd-danger);
+  /* 不接管 --diagram-*：图示在深色下放在浅色底板上，配色应保持浅色版 */
+  --shadow: var(--rd-shadow);
+  --radius: var(--rd-radius);
+  --sans: var(--rd-font);
+  --serif: var(--rd-font);
+  --mono: var(--rd-mono);
+}
+
+/* 深色主题：跟随站点 pto-design-lab:theme，取值与 site.css 一致 */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --rd-bg: #111113;
+  --rd-surface: #1a1a1d;
+  --rd-surface-2: #232327;
+  --rd-surface-3: #2e2e33;
+  --rd-ink: #ececea;
+  --rd-ink-soft: #d4d4d0;
+  --rd-muted: #a6a6a0;
+  --rd-faint: #77776f;
+  --rd-line: #2d2d31;
+  --rd-line-strong: #44444a;
+  --rd-accent: #a891ff;
+  --rd-accent-soft: #2a2343;
+  --rd-accent-line: #4a3f7a;
+  --rd-on-accent: #151515;
+  --rd-warn: #e5ad5a;
+  --rd-warn-soft: #3a2c16;
+  --rd-danger: #f08a82;
+  --rd-danger-soft: #3b1f1d;
+  --rd-ok: #74c48f;
+  --rd-ok-soft: #1c3326;
+  --rd-shadow: none;
+  --rd-plate: #f4f4f1;              /* 图示底板：图示本身保持原配色，不反色 */
+  --rd-plate-pad: 12px;
+
+  /* 这几个别名的语义是「深色块」而不是「正文墨色」，深色主题下不能跟着翻过来 */
+  --dark: #0f0f11;
+}
+
+@media (max-width: 1100px) { :root { --rd-gutter: 24px; } }
+@media (max-width: 760px)  { :root { --rd-gutter: 16px; } }
+
+/* ============================================================
+   2. 正文基底与字阶
+   ============================================================ */
+body {
+  background: var(--rd-bg);
+  color: var(--rd-ink);
+  font-family: var(--rd-font);
+  font-size: 16px;
+  line-height: 1.78;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* 不强制正文与标题的颜色：个别报告有深色 hero / 深色产品模拟面板，
+   统一颜色会把白字压成黑字。配色统一靠上面的 token 对齐完成。 */
+strong, b { font-weight: 650; }
+
+:root h1, :root h2, :root h3, :root h4, :root h5, :root h6 {
+  font-family: var(--rd-font);
+  color: inherit;
+}
+:root h1 { font-size: clamp(30px, 3.4vw, 42px); line-height: 1.18; font-weight: 700; letter-spacing: -0.022em; }
+:root h2 { font-size: clamp(21px, 2vw, 26px); line-height: 1.3; font-weight: 680; letter-spacing: -0.014em; }
+:root h3 { font-size: 18px; line-height: 1.45; font-weight: 650; letter-spacing: -0.006em; }
+:root h4 { font-size: 16px; line-height: 1.5; font-weight: 650; }
+:root h5, :root h6 { font-size: 14px; line-height: 1.5; font-weight: 650; }
+
+.kicker, .eyebrow, .brand, .atlas-kicker, .thesis-label, .sample-method, .pdl-toc__label {
+  color: var(--rd-accent);
+  font-family: var(--rd-font);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.lead, .subtitle, .overview, .thesis, .section-lead {
+  font-family: var(--rd-font);
+  font-size: 17px;
+  line-height: 1.75;
+  font-weight: 400;
+}
+
+/* ============================================================
+   3. 链接与焦点
+   ============================================================ */
+a { color: var(--rd-accent); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:hover { color: var(--rd-ink); }
+a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--rd-accent);
+  outline-offset: 3px;
+  border-radius: var(--rd-radius-xs);
+}
+::selection { background: var(--rd-accent-soft); color: var(--rd-ink); }
+.skip { background: var(--rd-ink); color: var(--rd-bg); border-radius: 0 0 var(--rd-radius-sm) var(--rd-radius-sm); font: 650 14px/1.4 var(--rd-font); }
+
+/* ============================================================
+   4. 内容区宽度与阅读测量
+   ============================================================ */
+:root .page,
+:root .shell,
+:root .layout,
+:root .cover,
+:root .masthead,
+:root .footer,
+:root body > main,
+:root main {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: calc(var(--rd-content) + var(--rd-gutter) * 2);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--rd-gutter);
+  padding-right: var(--rd-gutter);
+}
+
+/* 容器嵌套时只由最外层负责宽度与 gutter，内层不再叠第二份 padding */
+:root .page main, :root .shell main, :root .layout main,
+:root .page .page, :root .shell .shell, :root .layout .layout {
+  max-width: none;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* 侧栏式目录改为顺排；narrow 专用的重复目录隐藏 */
+:root .shell, :root .layout { display: block; gap: 0; }
+:root .contents, :root aside.nav {
+  position: static;
+  height: auto;
+  max-height: none;
+  overflow: visible;
+  width: auto;
+}
+:root .mobile-nav { display: none !important; }
+
+/* 正文文本收到统一阅读测量；表格、图示、卡片、栅格不受限制 */
+:root main > p, :root main > ul, :root main > ol, :root main > blockquote, :root main > dl,
+:root section > p, :root section > ul, :root section > ol, :root section > blockquote, :root section > dl,
+:root article > p, :root article > ul, :root article > ol, :root article > blockquote,
+:root .chapter > p, :root .chapter > ul, :root .chapter > ol, :root .chapter > blockquote,
+:root .page > p, :root .layout > p, :root .guide > p, :root .guide > ul, :root .guide > ol,
+:root .deck > p, :root .deck > ul, :root .deck > ol,
+:root .scenario > p, :root .scenario > ul, :root .scenario > ol {
+  max-width: var(--rd-measure);
+}
+:root .lead, :root .subtitle, :root .overview, :root .thesis, :root .section-lead {
+  max-width: calc(var(--rd-measure) + 80px);
+}
+
+/* ============================================================
+   5. 垂直节奏
+   ============================================================ */
+:root main > h2, :root section > h2, :root article > h2, :root .chapter > h2,
+:root main > .section-head, :root section > .section-head, :root .chapter > .chapter-heading {
+  margin-top: var(--rd-space-section);
+  margin-bottom: var(--rd-space-h2);
+}
+:root main > h2:first-child, :root section > h2:first-child,
+:root article > h2:first-child, :root .chapter > h2:first-child,
+:root section > .section-head:first-child, :root .chapter > .chapter-heading:first-child {
+  margin-top: 0;
+}
+:root main > h3, :root section > h3, :root article > h3, :root .chapter > h3 {
+  margin-top: var(--rd-space-h3);
+  margin-bottom: 10px;
+}
+:root main > p, :root section > p, :root article > p, :root .chapter > p {
+  margin-top: 0;
+  margin-bottom: var(--rd-space-para);
+}
+:root main > ul, :root main > ol,
+:root section > ul, :root section > ol,
+:root article > ul, :root article > ol,
+:root .chapter > ul, :root .chapter > ol {
+  margin-top: 0;
+  margin-bottom: var(--rd-space-list);
+  padding-left: 22px;
+}
+:root li + li { margin-top: var(--rd-space-item); }
+:root main > table, :root section > table, :root .chapter > table,
+:root .table-scroll, :root .comparison-table-wrap,
+:root figure, :root pre {
+  margin-top: var(--rd-space-block);
+  margin-bottom: var(--rd-space-block);
+}
+
+/* ============================================================
+   6. 目录区 —— 宽屏为右侧固定栏，窄屏为正文列顶部的卡片
+   ============================================================ */
+:root .pdl-toc-wrap {
+  box-sizing: border-box;
+  max-width: calc(var(--rd-content) + var(--rd-gutter) * 2);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--rd-gutter);
+  padding-right: var(--rd-gutter);
+}
+
+/* 目录被报告自己的卡片式 section 包着时，去掉外层卡片，避免卡中卡 */
+:root .pdl-toc-host { padding: 0; border: 0; background: none; box-shadow: none; }
+:root .pdl-toc-host > h2 { display: none; }
+
+:root .pdl-toc {
+  display: block;                   /* 个别报告给 nav 设了 flex，会把链接栅格压成一列 */
+  color: var(--rd-ink);
+  box-sizing: border-box;
+  width: auto;
+  max-width: var(--rd-content);
+  margin: var(--rd-space-block) auto calc(var(--rd-space-block) + 8px);
+  padding: 20px 22px 16px;
+  background: var(--rd-surface);
+  border: 1px solid var(--rd-line);
+  border-radius: var(--rd-radius);
+  box-shadow: var(--rd-shadow);
+}
+:root .pdl-toc > summary,
+:root .pdl-toc .pdl-toc__label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+  cursor: default;
+  color: var(--rd-accent);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border: 0;
+}
+:root .pdl-toc > summary { cursor: pointer; }
+:root .pdl-toc > summary::-webkit-details-marker { display: none; }
+:root .pdl-toc > summary::after {
+  content: "";
+  width: 7px; height: 7px; margin-left: auto;
+  border-right: 1.6px solid currentColor; border-bottom: 1.6px solid currentColor;
+  transform: rotate(45deg); transition: transform .18s ease;
+}
+:root .pdl-toc[open] > summary::after { transform: rotate(-135deg); }
+
+/* 目录区只承担目录：报告名与日期由文档头负责，不在目录卡里重复 */
+:root .pdl-toc .brand,
+:root .pdl-toc > h2,
+:root .pdl-toc > .meta { display: none; }
+
+:root .pdl-toc .tools {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin: 14px 0 0;
+  padding: 14px 0 2px;
+  border-top: 1px solid var(--rd-line);
+  color: var(--rd-muted);
+  font-size: 13px;
+}
+:root .pdl-toc .tools button {
+  padding: 6px 12px;
+  border: 1px solid var(--rd-line-strong);
+  border-radius: 999px;
+  background: var(--rd-surface);
+  color: var(--rd-ink);
+  font: 650 13px/1.5 var(--rd-font);
+  text-decoration: none;
+}
+:root .pdl-toc .tools button:hover { border-color: var(--rd-accent-line); background: var(--rd-accent-soft); color: var(--rd-accent); }
+
+:root .pdl-toc ol,
+:root .pdl-toc ul,
+:root .pdl-toc nav,
+:root .pdl-toc .pdl-toc__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(236px, 1fr));
+  gap: 2px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  columns: auto;
+}
+:root .pdl-toc li { margin: 0; list-style: none; }
+:root .pdl-toc a {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--rd-radius-xs);
+  color: var(--rd-ink-soft);
+  font-size: 14px;
+  line-height: 1.5;
+  text-decoration: none;
+  background: none;
+}
+:root .pdl-toc a:hover,
+:root .pdl-toc a:focus-visible,
+:root .pdl-toc a.active { background: var(--rd-accent-soft); color: var(--rd-accent); }
+:root .pdl-toc a > span:first-child,
+:root .pdl-toc .pdl-toc__num {
+  flex: none;
+  min-width: 22px;
+  color: var(--rd-faint);
+  font: 600 12px/1.5 var(--rd-mono);
+  font-variant-numeric: tabular-nums;
+}
+:root .pdl-toc a:hover > span:first-child,
+:root .pdl-toc a.active > span:first-child,
+:root .pdl-toc a:hover .pdl-toc__num { color: var(--rd-accent); }
+
+/* —— 屏幕够宽时：目录进入正文右侧的留白区并固定，正文仍在屏幕内居中 ——
+   900px 正文列 + 两侧各 250px 留白，目录 220px 放得下时才启用；放不下就退回正文列顶部的目录卡。 */
+@media (min-width: 1400px) {
+  :root .pdl-toc-wrap { display: contents; }
+  :root .pdl-toc,
+  :root aside.nav.pdl-toc,
+  :root details.contents.pdl-toc {
+    position: fixed;
+    top: 72px;
+    right: var(--rd-edge);          /* 与导航条右侧内容、返回顶部按钮对齐同一条边 */
+    left: auto;
+    z-index: 20;
+    width: 220px;
+    max-width: 220px;
+    max-height: calc(100vh - 104px);
+    margin: 0;
+    padding: 16px 14px 12px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  :root .pdl-toc ol,
+  :root .pdl-toc ul,
+  :root .pdl-toc nav,
+  :root .pdl-toc .pdl-toc__list { grid-template-columns: 1fr; gap: 1px; }
+  :root .pdl-toc a { padding: 6px 8px; font-size: 13px; }
+  :root .pdl-toc .tools { font-size: 12px; }
+  :root .pdl-toc .tools button { padding: 5px 10px; font-size: 12px; }
+  /* 目录被外层 section 包着时，那层也不占正文流 */
+  :root .pdl-toc-host { display: contents; }
+}
+
+/* ============================================================
+   6.5 文档头、章节编号、深色 hero
+   ============================================================ */
+/* 文档头：六篇统一成「引题 → 标题 → 导语 → 元信息」的节奏与分隔 */
+:root .pdl-doc-head {
+  margin-bottom: var(--rd-space-section);
+  padding-bottom: var(--rd-space-block);
+  border-bottom: 1px solid var(--rd-line);
+}
+:root .pdl-doc-head > h1 { margin-top: 10px; margin-bottom: 14px; }
+/* 没有 header 容器的报告（h1 直接挂在 main 下）：由 h1 与元信息网格各担一半节奏 */
+:root h1.pdl-doc-head--lead { margin-bottom: 14px; }
+:root .pdl-meta.pdl-doc-head--tail {
+  margin-bottom: var(--rd-space-section);
+  padding-bottom: var(--rd-space-block);
+  border-bottom: 1px solid var(--rd-line);
+}
+:root .pdl-doc-head > .kicker,
+:root .pdl-doc-head > .eyebrow { margin: 0; }
+:root .pdl-doc-head > p,
+:root .pdl-doc-head > .lead,
+:root .pdl-doc-head > .subtitle { margin: 0 0 14px; max-width: calc(var(--rd-measure) + 80px); }
+
+/* 元信息：统一成同一种卡片网格（runtime 那行挤在一起的版本信息由 JS 拆成同样的结构） */
+:root .pdl-meta,
+:root .meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+:root .pdl-meta__item,
+:root .meta-grid .meta-item {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: var(--rd-pad-card-sm);
+  border: 1px solid var(--rd-line);
+  border-radius: var(--rd-radius-sm);
+  background: var(--rd-surface);
+  box-shadow: none;
+}
+:root .pdl-meta__key { color: var(--rd-muted); font-size: 12px; line-height: 1.5; }
+:root .pdl-meta__val { color: var(--rd-ink); font-size: 14px; font-weight: 650; line-height: 1.5; }
+
+/* 章节编号：三种写法（独立 span、.num、写在标题文字里）统一成同一个编号位 */
+:root .pdl-h-num {
+  display: inline-block;
+  min-width: 26px;
+  margin-right: 12px;
+  color: var(--rd-accent);
+  font: 650 0.62em/1 var(--rd-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  vertical-align: baseline;
+}
+:root .chapter-heading, :root .section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+}
+:root .chapter-heading > .pdl-h-num, :root .section-head > .pdl-h-num { flex: none; font-size: 15px; }
+:root .chapter-heading > h2, :root .section-head > div, :root .section-head > h2 { min-width: 0; }
+
+/* 标题区与章节分区一律不套白色卡片：标题、章节直接坐在页面底色上，
+   卡片只留给正文里真正的卡片元素（.card / .box / .callout 等）。 */
+:root .hero, :root .pdl-doc-head,
+:root body > main > section, :root .page > section, :root main > section,
+:root header, :root section {
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding-left: 0;
+  padding-right: 0;
+}
+:root .pdl-doc-head { border-bottom: 1px solid var(--rd-line); }   /* 只保留一条分隔线 */
+
+/* 标题区按统一顺序排列：报头 → 引题 → 标题 → 副标题 → 导语 → 论点 → 标签 → 元信息 → 旁注 → 工具 */
+:root .pdl-doc-head {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+:root .pdl-doc-head > [data-pdl-head="masthead"] { order: 1; margin: 0 0 18px; padding: 0 0 12px; border-bottom: 1px solid var(--rd-line); }
+:root .pdl-doc-head > [data-pdl-head="kicker"]   { order: 2; margin: 0; }
+:root .pdl-doc-head > [data-pdl-head="title"]    { order: 3; margin: 10px 0 14px; }
+:root .pdl-doc-head > [data-pdl-head="subtitle"] { order: 4; margin: 0 0 12px; }
+:root .pdl-doc-head > [data-pdl-head="lead"]     { order: 5; margin: 0 0 14px; }
+:root .pdl-doc-head > [data-pdl-head="thesis"]   { order: 6; margin: 4px 0 16px; padding: 0; border: 0; background: none; }
+:root .pdl-doc-head > [data-pdl-head="chips"]    { order: 7; display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+:root .pdl-doc-head > [data-pdl-head="meta"]     { order: 8; margin: 2px 0 0; }
+:root .pdl-doc-head > [data-pdl-head="note"]     { order: 9; align-self: stretch; max-width: none; margin: 16px 0 0; padding: 14px 16px; border: 1px solid var(--rd-line); border-radius: var(--rd-radius-sm); background: var(--rd-surface-2); color: var(--rd-muted); font-size: 13px; line-height: 1.6; }
+:root .pdl-doc-head > [data-pdl-head="tools"]    { order: 10; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 16px 0 0; }
+:root .pdl-doc-head > [data-pdl-head="tools"] button,
+:root .pdl-doc-head > [data-pdl-head="tools"] a {
+  padding: 6px 12px; border: 1px solid var(--rd-line-strong); border-radius: 999px;
+  background: var(--rd-surface); color: var(--rd-ink); font: 650 13px/1.5 var(--rd-font); text-decoration: none;
+}
+:root .pdl-doc-head > [data-pdl-head="tools"] button:hover,
+:root .pdl-doc-head > [data-pdl-head="tools"] a:hover { border-color: var(--rd-accent-line); background: var(--rd-accent-soft); color: var(--rd-accent); }
+
+/* 文末区：六篇统一 */
+:root .pdl-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px 20px;
+  margin-top: var(--rd-space-section);
+  padding: var(--rd-space-block) 0 8px;
+  border-top: 1px solid var(--rd-line);
+  color: var(--rd-muted);
+  font-size: 13px;
+  line-height: 1.7;
+  background: none;
+}
+:root .pdl-foot p { margin: 0; color: inherit; max-width: var(--rd-measure); }
+:root .pdl-foot__back { color: var(--rd-accent); font-weight: 650; text-decoration: none; white-space: nowrap; }
+:root .pdl-foot__back:hover { text-decoration: underline; }
+
+/* 代码块：统一顶栏 + 复制按钮 */
+:root .pdl-code {
+  margin: var(--rd-space-block) 0;
+  border: 1px solid var(--rd-line);
+  border-radius: var(--rd-radius-sm);
+  background: var(--rd-surface-2);
+  overflow: hidden;
+}
+:root .pdl-code__bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--rd-line);
+  color: var(--rd-muted);
+  font: 650 12px/1.5 var(--rd-mono);
+}
+:root .pdl-code__copy {
+  padding: 3px 10px; border: 1px solid var(--rd-line-strong); border-radius: 999px;
+  background: var(--rd-surface); color: var(--rd-ink); font: 650 12px/1.5 var(--rd-font); cursor: pointer;
+}
+:root .pdl-code__copy:hover { border-color: var(--rd-accent-line); background: var(--rd-accent-soft); color: var(--rd-accent); }
+:root .pdl-code > pre { margin: 0; border: 0; border-radius: 0; background: none; }
+
+/* 图示外框：占满宽度的裸 SVG 与已有图示容器用同一套外框 */
+:root .pdl-figure {
+  margin: var(--rd-space-block) 0;
+  padding: 14px;
+  border: 1px solid var(--rd-line);
+  border-radius: var(--rd-radius);
+  background: var(--rd-surface);
+  box-shadow: var(--rd-shadow);
+  overflow-x: auto;
+}
+:root .pdl-figure > svg { display: block; margin: 0 auto; }
+:root .hero { color: var(--rd-ink); }
+:root .hero h1, :root .hero p, :root .hero span, :root .hero div, :root .hero strong { color: inherit; }
+:root .hero .kicker, :root .hero .eyebrow { color: var(--rd-accent); }
+:root .hero a { color: var(--rd-accent); }
+
+/* ============================================================
+   7. 折叠区
+   ============================================================ */
+:root details:not(.pdl-toc) {
+  margin: var(--rd-space-block) 0;
+  padding: 0;
+  background: var(--rd-surface);
+  border: 1px solid var(--rd-line);
+  border-radius: var(--rd-radius);
+  box-shadow: none;
+  overflow: hidden;
+}
+:root details:not(.pdl-toc) > summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 18px;
+  margin: 0;
+  list-style: none;
+  cursor: pointer;
+  color: var(--rd-ink);
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.6;
+  letter-spacing: 0;
+  text-transform: none;
+  background: var(--rd-surface-2);
+}
+:root details:not(.pdl-toc) > summary::-webkit-details-marker { display: none; }
+:root details:not(.pdl-toc) > summary::before {
+  content: "";
+  flex: none;
+  width: 7px; height: 7px;
+  border-right: 1.6px solid var(--rd-accent);
+  border-bottom: 1.6px solid var(--rd-accent);
+  transform: rotate(-45deg);
+  transition: transform .18s ease;
+}
+:root details:not(.pdl-toc)[open] > summary::before { transform: rotate(45deg); }
+:root details:not(.pdl-toc) > summary:hover { background: var(--rd-accent-soft); color: var(--rd-accent); }
+:root details:not(.pdl-toc)[open] > summary { border-bottom: 1px solid var(--rd-line); }
+:root details:not(.pdl-toc) > *:not(summary) { margin-left: 18px; margin-right: 18px; }
+:root details:not(.pdl-toc) > *:not(summary):first-of-type { margin-top: 16px; }
+:root details:not(.pdl-toc) > *:not(summary):last-child { margin-bottom: 16px; }
+
+/* ============================================================
+   8. 卡片与元件
+   注意：.pto-* 是报告内模拟的深色产品界面（.pto-module）的内部类，
+   阅读层一律不碰，否则会把深色面板里的卡片刷成白底。
+   ============================================================ */
+:root .card,
+:root .box,
+:root .meta-item,
+:root .callout,
+:root .scenario,
+:root .statement,
+:root .deck,
+:root .cover-note,
+:root .visual-sample,
+:root .evidence-stat,
+:root .proposal,
+:root .figure,
+:root .svg-wrap,
+:root .diagram,
+:root .screenshot {
+  border-radius: var(--rd-radius);
+  border: 1px solid var(--rd-line);
+  background: var(--rd-surface);
+  box-shadow: var(--rd-shadow);
+}
+:root .card, :root .box, :root .callout, :root .scenario, :root .statement, :root .deck { padding: var(--rd-pad-card); }
+:root .meta-item { padding: var(--rd-pad-card-sm); }
+:root .card .card, :root .box .box, :root .card .box, :root .box .card,
+:root details .card, :root details .box { box-shadow: none; }
+
+:root .warning, :root .amber { border-color: var(--rd-warn-soft); background: var(--rd-warn-soft); }
+:root .danger, :root .red { border-color: var(--rd-danger-soft); background: var(--rd-danger-soft); }
+:root .success, :root .green, :root .good { border-color: var(--rd-ok-soft); background: var(--rd-ok-soft); }
+:root .primary, :root .teal, :root .violet { border-color: var(--rd-accent-line); background: var(--rd-accent-soft); }
+/* 深色产品模拟面板里的同名语义类属于那套界面，交还给它自己的配色 */
+:root .pto-module .warning, :root .pto-module .amber,
+:root .pto-module .danger, :root .pto-module .red,
+:root .pto-module .success, :root .pto-module .green, :root .pto-module .good,
+:root .pto-module .primary, :root .pto-module .teal, :root .pto-module .violet {
+  border-color: var(--border-default);
+  background: var(--surface-2);
+}
+
+:root .tag, :root .badge, :root .pill, :root .signal, :root .status, :root .req-id {
+  border-radius: 999px;
+  font-family: var(--rd-font);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+:root .req-id { font-family: var(--rd-mono); font-weight: 600; }
+
+/* ============================================================
+   9. 表格、代码、图
+   ============================================================ */
+table { border-collapse: collapse; font-family: var(--rd-font); font-size: 14px; line-height: 1.62; }
+thead th {
+  background: var(--rd-surface-2);
+  color: var(--rd-ink);
+  font-weight: 650;
+  text-align: left;
+  border-bottom: 1px solid var(--rd-line-strong);
+}
+td, th { border-color: var(--rd-line); vertical-align: top; }
+tbody tr + tr td { border-top: 1px solid var(--rd-line); }
+.table-scroll, .comparison-table-wrap { max-width: 100%; overflow-x: auto; border-radius: var(--rd-radius-sm); }
+
+code, kbd, samp { font-family: var(--rd-mono); font-size: 0.9em; }
+:not(pre) > code {
+  padding: 0.12em 0.4em;
+  border: 1px solid var(--rd-line);
+  border-radius: 5px;
+  background: var(--rd-surface-2);
+  color: var(--rd-ink);
+}
+pre {
+  background: var(--rd-surface-2);
+  border: 1px solid var(--rd-line);
+  border-radius: var(--rd-radius-sm);
+  color: var(--rd-ink);
+  font-family: var(--rd-mono);
+  font-size: 13px;
+  line-height: 1.7;
+  overflow: auto;
+}
+pre code { padding: 0; border: 0; background: none; font-size: inherit; }
+
+img, svg, canvas { max-width: 100%; }
+img { border-radius: var(--rd-radius-sm); }
+figcaption, .caption, .source-note, .atlas-footnote, .proposed-note {
+  font-family: var(--rd-font);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--rd-muted);
+}
+hr { border: 0; border-top: 1px solid var(--rd-line); }
+blockquote { border-left: 3px solid var(--rd-accent); color: var(--rd-ink-soft); }
+
+/* 深色下只给「图形本身」垫浅色底板：图示保持原配色、不反色，
+   文字容器仍走深色，避免浅底浅字。 */
+:root[data-theme="dark"] img,
+:root[data-theme="dark"] .svg-wrap > svg,
+:root[data-theme="dark"] .diagram > svg,
+:root[data-theme="dark"] .figure > svg,
+:root[data-theme="dark"] .screenshot > svg,
+:root[data-theme="dark"] figure > svg,
+:root[data-theme="dark"] :is(section, main, article, .chapter, .box, .card, .deck, p) > svg {
+  background: var(--rd-plate);
+  padding: var(--rd-plate-pad);
+  border-radius: var(--rd-radius-sm);
+}
+
+/* ============================================================
+   10. 返回顶部与标题锚点
+   ============================================================ */
+:root .pdl-top {
+  position: fixed;
+  right: var(--rd-edge);
+  bottom: 20px;
+  z-index: 30;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  border: 1px solid var(--rd-line-strong);
+  border-radius: 999px;
+  background: var(--rd-surface);
+  color: var(--rd-ink);
+  font: 650 13px/1 var(--rd-font);
+  box-shadow: var(--rd-shadow);
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+  transition: opacity .18s ease, transform .18s ease, visibility .18s;
+}
+:root .pdl-top.is-on { opacity: 1; visibility: visible; transform: none; }
+:root .pdl-top:hover { border-color: var(--rd-accent-line); background: var(--rd-accent-soft); color: var(--rd-accent); }
+
+:root .pdl-anchor {
+  margin-left: 8px;
+  color: var(--rd-faint);
+  font-size: 0.62em;
+  font-weight: 500;
+  text-decoration: none;
+  opacity: 0;
+  transition: opacity .15s ease;
+}
+:root :hover > .pdl-anchor, :root .pdl-anchor:focus-visible { opacity: 1; }
+:root .pdl-anchor:hover { color: var(--rd-accent); }
+
+/* 报告自带的返回顶部控件由统一控件取代 */
+:root .pdl-dup-top { display: none !important; }
+
+/* ============================================================
+   11. 窄屏
+   ============================================================ */
+@media (max-width: 760px) {
+  body { font-size: 15px; }
+  table { font-size: 13px; }
+  .lead, .subtitle, .overview, .thesis, .section-lead { font-size: 16px; }
+  :root { --rd-space-section: 40px; --rd-space-block: 20px; }
+  :root .pdl-toc { padding: 16px 16px 12px; }
+  :root .pdl-toc ol, :root .pdl-toc ul, :root .pdl-toc nav, :root .pdl-toc .pdl-toc__list { grid-template-columns: 1fr; }
+  :root table { display: block; max-width: 100%; overflow-x: auto; }
+  :root pre, :root img, :root svg { max-width: 100%; }
+  :root .pdl-top { bottom: 14px; }
+}
+
+@media print {
+  body { background: #fff; padding-right: 0; }
+  :root .pdl-toc { position: static; width: auto; max-width: none; box-shadow: none; }
+  :root .pdl-top, :root .pdl-anchor { display: none; }
+  pre, table { break-inside: avoid; }
+}
